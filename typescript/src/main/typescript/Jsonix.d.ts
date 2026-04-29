@@ -64,13 +64,31 @@ interface Marshaller { // TODO: generics like marshalString(object:T):string;
 }
 
 declare module Jsonix {
+    export interface ContextOptions {
+        /**
+         * Maps namespace URIs to prefixes for XML serialization.
+         */
+        namespacePrefixes?: { [namespaceUri: string]: string }
+        /**
+         * Whether to support xsi:type attributes during unmarshalling.
+         * Defaults to true.
+         */
+        supportXsiType?: boolean
+        /**
+         * The mapping style to use. Can be a string identifier or a custom mapping style object.
+         * Defaults to 'standard'.
+         */
+        mappingStyle?: 'standard' | 'simplified' | Object
+    }
+
     export class Context {
         /**
          * Creates an instance of Context.
          *
-         * @param {any[]} s (description)
+         * @param {any[]} mappings Array of mapping modules that define XML/JSON schema definitions
+         * @param {ContextOptions} options Optional configuration options
          */
-        constructor(s:any[]);
+        constructor(mappings:any[], options?:ContextOptions);
 
         /**
          * (description)
