@@ -25,6 +25,15 @@ const year: number | undefined = shipDate?.year;
 const comment: string | undefined = po.comment;
 const typeName: 'PO.PurchaseOrderType' | undefined = po.TYPE_NAME;
 
+// PARENT (compiler CR-006): declared as the union of the types that can contain each type; the
+// runtime half (jsonix-CR-002) will set it when `parentPointers` is on. Declaration-level checks only.
+const itemParent: Items | undefined = firstItem?.PARENT;
+const addressParent: PurchaseOrderType | undefined = po.shipTo.PARENT;
+// @ts-expect-error PurchaseOrderType only occurs at the root, so it has no PARENT member
+const rootParent = po.PARENT;
+// @ts-expect-error PARENT is read-only
+po.shipTo.PARENT = po;
+
 // The union of global elements, and the callback forms.
 unmarshaller.unmarshalFile<RootElement>('po.xml', (root) => {
   const localPart: string = root.name.localPart;
@@ -81,7 +90,7 @@ const incomplete: USAddress = { name: 'x' };
 marshaller.marshalString({ foo: 'bar' });
 
 export {
-  name, zip, year, comment, typeName, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
+  name, zip, year, comment, typeName, itemParent, addressParent, rootParent, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
   untypedName, untypedValue, fromInterface, mixed, runtimeCalendar, runtimeName,
   out, doc, misspelt, wrongType, incomplete,
 };

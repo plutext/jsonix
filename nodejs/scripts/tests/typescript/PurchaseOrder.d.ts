@@ -20,6 +20,7 @@ export interface JsonixMapping<R = unknown> { readonly __rootElement?: R; readon
 
 export interface Items {
   TYPE_NAME?: 'PO.Items';
+  readonly PARENT?: PurchaseOrderType;
   item?: Items.Item[];
 }
 
@@ -34,6 +35,7 @@ export interface PurchaseOrderType {
 
 export interface USAddress {
   TYPE_NAME?: 'PO.USAddress';
+  readonly PARENT?: PurchaseOrderType;
   name: string;
   street: string;
   city: string;
@@ -52,6 +54,7 @@ export type RootElement = CommentElement | PurchaseOrderElement;
 export namespace Items {
   export interface Item {
     TYPE_NAME?: 'PO.Items.Item';
+    readonly PARENT?: Items;
     productName: string;
     quantity: number;
     usPrice: number;

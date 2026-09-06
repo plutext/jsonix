@@ -8,3 +8,4 @@ proposals frequently depend on.
 | CR | Title | Depends on | Status |
 |----|-------|------------|--------|
 | [jsonix-CR-001](jsonix-CR-001-typescript-consumers.md) | Support TypeScript consumers of compiler-generated declarations and ES-module mappings | compiler CR-005 | Implemented 2026-09-06 (3.1.0) |
+| [jsonix-CR-002](jsonix-CR-002-parent-pointers-and-deep-copy.md) | Parent pointers (`PARENT`) and `Jsonix.Util.deepCopy` for unmarshalled objects, mirroring docx4j's `-Xparent-pointer` / `-Xdocx4j-copy` | jsonix-CR-001; companion compiler CR-006 | Draft 2026-09-07 (proposed from the compiler repository; revised the same day after review against the runtime) |
