@@ -1,7 +1,7 @@
 # jsonix-CR-001: Support TypeScript consumers of compiler-generated declarations and ES-module mappings
 
-**Status:** Implemented (2026-09-06), items 1 to 5; item 6 is tracked in the compiler repository
-**Depends on:** `jsonix-schema-compiler` CR-005 (TypeScript output, implemented 2026-09-06, commit `0b2c8a8`),
+**Status:** Implemented (2026-09-06), items 1 to 5; of item 6 the compiler has done the `JsonixMapping<RootElement>` part and this runtime infers from it
+**Depends on:** `jsonix-schema-compiler` CR-005 (TypeScript output, implemented 2026-09-06, commit `09dee1d`),
 which in turn builds on its CR-003 (deterministic output) and CR-004 (Jakarta XML Binding 4)
 **Repository:** `@mitre/jsonix` runtime (this repository); the compiler lives in the sibling
 `jsonix-schema-compiler` repository
@@ -41,7 +41,7 @@ export interface XmlCalendar { year?: number; month?: number; day?: number; hour
 export interface XmlDuration { sign?: number; years?: number; months?: number; days?: number; hours?: number;
   minutes?: number; seconds?: number; }
 export interface TypedNamedValue<T> { name: XmlQName; value: T; }
-export interface JsonixMapping { readonly [key: string]: unknown; }
+export interface JsonixMapping<R = unknown> { readonly __rootElement?: R; readonly [key: string]: unknown; }
 
 export interface USAddress { TYPE_NAME?: 'PO.USAddress'; name: string; street: string; city: string;
   state: string; zip: number; country?: string; }
@@ -49,7 +49,7 @@ export interface PurchaseOrderType { TYPE_NAME?: 'PO.PurchaseOrderType'; shipTo:
   comment?: string; items: Items; orderDate?: XmlCalendar; }
 export type PurchaseOrderElement = TypedNamedValue<PurchaseOrderType>;
 export type RootElement = CommentElement | PurchaseOrderElement;
-export declare const PO: JsonixMapping;
+export declare const PO: JsonixMapping<RootElement>;
 ```
 
 plus one-line re-export files per JavaScript output (`PurchaseOrder.std.d.ts`, and
@@ -251,7 +251,7 @@ must **not** be ignored).
 ### 3. Contract test: generated fixtures under `nodejs/scripts/tests/typescript/`
 
 Commit the compiler's output for the purchase order schema, generated with the compiler at
-commit `0b2c8a8` or later from a Jakarta-namespace `bindings.xjb` that declares both a standard
+commit `09dee1d` or later from a Jakarta-namespace `bindings.xjb` that declares both a standard
 UMD output and an ESM output:
 
 ```
@@ -411,6 +411,18 @@ Deviations and additions found while doing it:
   module removed from `nodejs/pom.xml`; `demos/` and `fiddles/` kept with a note in `CLAUDE.md`
   and the README that their `.xjb` files predate the Jakarta namespace.
 - The `docs/change-requests/README.md` index was added with this CR.
+- **Root element inference (item 6, second bullet) is done on both sides.** The compiler's final
+  CR-005 commit (`09dee1d`, superseding the draft `0b2c8a8` this CR first cited) declares
+  `export declare const PO: JsonixMapping<RootElement>`, with `RootElement` carried as the phantom
+  property `__rootElement?: R`. The runtime typings read it: `Context<M extends Mapping>` infers
+  `M` from the constructor's mappings, `createUnmarshaller()` returns
+  `Unmarshaller<RootElementOf<M>>`, and each `unmarshal*` method defaults its type argument to
+  that union. So `new Jsonix.Context([PO]).createUnmarshaller().unmarshalString(xml)` is typed as
+  `RootElement` with no type argument; a union of mappings gives the union of their root elements;
+  a hand-written mapping (no `__rootElement`) falls back to `TypedNamedValue<unknown>`. An explicit
+  type argument still narrows. Fixtures were regenerated from `09dee1d` (only `PurchaseOrder.d.ts`
+  changed) and `usage.ts` / `usage.node16.mts` check the inference, including that the union is not
+  silently narrowed to one member.
 
 Verification (Node 18.18.1 locally; CI pins Node 22):
 
@@ -421,4 +433,4 @@ Verification (Node 18.18.1 locally; CI pins Node 22):
 | `npm run test:esm` | green: `import { Jsonix } from '@mitre/jsonix'` resolves through the `exports` map by self-reference, unmarshals `po.xml` via `PurchaseOrder.mjs` |
 | `require('@mitre/jsonix')`, `import j from '@mitre/jsonix'`, `require('@mitre/jsonix/jsonix.js')` | all work |
 | `npm pack` | `jsonix.js`, `jsonix.mjs`, `types/main.d.ts`, `package.json`, `README.md`, `jsonschemas/`; no `tests/` |
-| Generated fixtures vs the compiler's golden `PurchaseOrder.d.ts` | byte-identical (compiler commit `0b2c8a8`) |
+| Generated fixtures vs the compiler's golden `PurchaseOrder.d.ts` | byte-identical (compiler commit `09dee1d`) |

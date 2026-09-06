@@ -15,8 +15,8 @@ export type XmlDomNode = any;
 export type XmlAnyElement = any;
 /** The value of an anyAttribute property. */
 export interface XmlAnyAttributes { [attributeName: string]: string; }
-/** A Jsonix mapping object as consumed by new Jsonix.Context([...]). */
-export interface JsonixMapping { readonly [key: string]: unknown; }
+/** A Jsonix mapping object as consumed by new Jsonix.Context([...]); R is the union of its global element types. */
+export interface JsonixMapping<R = unknown> { readonly __rootElement?: R; readonly [key: string]: unknown; }
 
 export interface Items {
   TYPE_NAME?: 'PO.Items';
@@ -62,4 +62,4 @@ export namespace Items {
 }
 
 /** The Jsonix mapping [PO] exported by the module's JavaScript file. */
-export declare const PO: JsonixMapping;
+export declare const PO: JsonixMapping<RootElement>;

@@ -12,6 +12,7 @@ const unmarshaller = context.createUnmarshaller();
 const marshaller = context.createMarshaller();
 
 const po = unmarshaller.unmarshalString<PurchaseOrderElement>(xml).value;
+const inferred: RootElement = unmarshaller.unmarshalString(xml);
 const name: string = po.shipTo.name;
 const year: number | undefined = po.orderDate?.year;
 
@@ -26,4 +27,4 @@ const out: string = marshaller.marshalString<PurchaseOrderElement>({
 // @ts-expect-error misspelt property
 const misspelt = po.shipTo.nme;
 
-export { name, year, out, misspelt };
+export { name, year, inferred, out, misspelt };

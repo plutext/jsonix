@@ -99,6 +99,7 @@ import { PO } from './mappings/PO';
 import type { PurchaseOrderElement, USAddress } from './mappings/PO';
 
 const context = new Jsonix.Context([PO]);
+const element = context.createUnmarshaller().unmarshalString(xml);   // RootElement, inferred from PO
 const po = context.createUnmarshaller().unmarshalString<PurchaseOrderElement>(xml).value;
 po.shipTo.name;        // string
 po.orderDate?.year;    // number | undefined: dates are Jsonix calendars, not JS Dates
@@ -111,7 +112,9 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
 ```
 
 * An unmarshaller returns `Jsonix.TypedNamedValue<T>`, i.e. `{ name: QName, value: T }`; generated files alias it per
-  global element (`PurchaseOrderElement`) and as the union of all of them (`RootElement`).
+  global element (`PurchaseOrderElement`) and as the union of all of them (`RootElement`). The generated mapping
+  constant is declared as `JsonixMapping<RootElement>`, so a context built from generated mappings infers that union as
+  the result of `unmarshal*` when no type argument is given; a type argument narrows it.
 * Unmarshalled objects carry `TYPE_NAME` (e.g. `'PO.USAddress'`), which the generated interfaces declare as a literal
   type usable as a discriminant. It is optional on input; you need not set it when marshalling.
 * The compiler can also write the mapping as an ES module (`<jsonix:output format="esm"/>` gives `PO.mjs`), and this

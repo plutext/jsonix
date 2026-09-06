@@ -4,7 +4,7 @@
 import { Jsonix } from '@mitre/jsonix';
 import { PO } from './PurchaseOrder.std';
 import { PO as PO_ESM } from './PurchaseOrder.mjs';
-import type { PurchaseOrderElement, RootElement, USAddress, Items, XmlCalendar } from './PurchaseOrder.std';
+import type { PurchaseOrderElement, PurchaseOrderType, RootElement, USAddress, Items, XmlCalendar } from './PurchaseOrder.std';
 
 declare const xml: string;
 
@@ -32,10 +32,31 @@ unmarshaller.unmarshalFile<RootElement>('po.xml', (root) => {
 });
 unmarshaller.unmarshalURL<RootElement>('http://localhost/po.xml', (root) => void root.value);
 
-// Without a type argument the result is still an element, not a bare record.
-const untyped = unmarshaller.unmarshalString(xml);
+// (d) Without a type argument the result is the mapping's root element union, inferred from
+// JsonixMapping<RootElement> via the Context's type parameter.
+const inferred = unmarshaller.unmarshalString(xml);
+const inferredRoot: RootElement = inferred;
+const inferredName: string = inferred.name.localPart;
+const inferredValue: string | PurchaseOrderType = inferred.value;
+if (typeof inferred.value !== 'string') {
+  const narrowed: string = inferred.value.shipTo.name;
+  void narrowed;
+}
+// @ts-expect-error the union is not one of its members
+const notNarrowed: PurchaseOrderElement = inferred;
+// The ESM mapping infers the same.
+const inferredEsm: RootElement = esmContext.createUnmarshaller().unmarshalString(xml);
+
+// A hand-written mapping (no __rootElement) yields the untyped element, not a bare record.
+const untyped = new Jsonix.Context([{ name: 'X', typeInfos: [], elementInfos: [] }]).createUnmarshaller().unmarshalString(xml);
 const untypedName: string = untyped.name.localPart;
 const untypedValue: unknown = untyped.value;
+// ... also when the hand-written mapping is typed with an interface (no index signature).
+interface HandWrittenMapping { name: string; typeInfos: object[]; elementInfos: object[]; }
+declare const handWritten: HandWrittenMapping;
+const fromInterface: Jsonix.TypedNamedValue = new Jsonix.Context([handWritten]).createUnmarshaller().unmarshalString(xml);
+// Mixed generated and hand-written mappings: the generated one's root elements survive.
+const mixed: RootElement | Jsonix.TypedNamedValue = new Jsonix.Context([PO, handWritten]).createUnmarshaller().unmarshalString(xml);
 
 // (b) A generated interface is enough for the runtime's own QName / Calendar types.
 const runtimeCalendar: Jsonix.XML.Calendar | undefined = shipDate;
@@ -60,6 +81,7 @@ const incomplete: USAddress = { name: 'x' };
 marshaller.marshalString({ foo: 'bar' });
 
 export {
-  esmContext, name, zip, year, comment, typeName, untypedName, untypedValue, runtimeCalendar, runtimeName,
+  name, zip, year, comment, typeName, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
+  untypedName, untypedValue, fromInterface, mixed, runtimeCalendar, runtimeName,
   out, doc, misspelt, wrongType, incomplete,
 };

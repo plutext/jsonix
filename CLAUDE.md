@@ -68,7 +68,10 @@ typings but hard-code the runtime's data representation. The contract, guarded b
 Changing any of these in `jsonix.js` breaks every generated `.d.ts` in the wild. `types/main.d.ts` (hand-written, a
 proper ES module with `export namespace Jsonix`, plus deprecated global aliases for the pre-3.1 names) mirrors the same
 shapes and makes `unmarshalString<E>()` / `marshalString<E>()` generic so generated element types flow through without
-casts. Update it when the public API changes; `tests/typescript/usage.ts` must keep compiling and its
+casts. `Context<M>` infers `M` from its mappings and reads the phantom `__rootElement` that generated
+`JsonixMapping<RootElement>` constants carry, so `createUnmarshaller()` returns `Unmarshaller<RootElementOf<M>>` and
+`unmarshal*` default to that union (hand-written mappings fall back to `TypedNamedValue<unknown>`). Update the file when
+the public API changes; `tests/typescript/usage.ts` and `usage.node16.mts` must keep compiling and their
 `@ts-expect-error` lines must keep failing.
 
 Packaging: `package.json` has an `exports` map (`import` → `jsonix.mjs`, a thin ESM wrapper over the CommonJS bundle;
