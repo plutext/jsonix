@@ -96,6 +96,16 @@ Jsonix.XML.Calendar = Jsonix.Class({
 		var timezoneOffset = -60000 * (this.timezone || 0);
 		this.date = new Date(initialDate.getTime() + timezoneOffset);
 	},
+	clone: function () {
+		var data = {};
+		var fields = ['year', 'month', 'day', 'hour', 'minute', 'second', 'fractionalSecond', 'timezone'];
+		for (var index = 0; index < fields.length; index++) {
+			if (Jsonix.Util.Type.isNumber(this[fields[index]])) {
+				data[fields[index]] = this[fields[index]];
+			}
+		}
+		return new Jsonix.XML.Calendar(data);
+	},
 	CLASS_NAME : "Jsonix.XML.Calendar"
 });
 Jsonix.XML.Calendar.MIN_TIMEZONE = -14 * 60;

@@ -16,6 +16,19 @@ assert.equal(element.value.shipTo.name, 'Alice Smith');
 assert.equal(typeof element.value.shipTo.zip, 'number');
 assert.equal(element.value.orderDate.year, 1999);
 
+// Parent pointers and deep copy (jsonix-CR-002), the same checks as the compiler's smoke test.
+const parented = new Jsonix.Context([PO], { parentPointers: true }).createUnmarshaller().unmarshalString(xml).value;
+assert.equal(parented.shipTo.PARENT, parented);
+assert.equal(parented.items.item[0].PARENT, parented.items);
+assert.equal(Object.prototype.hasOwnProperty.call(parented, 'PARENT'), false);
+assert.deepEqual(Object.keys(parented.shipTo), Object.keys(element.value.shipTo));
+const copy = Jsonix.Util.deepCopy(parented);
+assert.notEqual(copy, parented);
+assert.equal(copy.shipTo.PARENT, copy);
+assert.equal(copy.items.item[0].PARENT, copy.items);
+assert.equal(Object.prototype.hasOwnProperty.call(copy, 'PARENT'), false);
+assert.ok(Jsonix.Util.Type.isEqual(copy, parented));
+
 const text = context.createMarshaller().marshalString(element);
 assert.ok(text.startsWith('<?xml') || text.startsWith('<purchaseOrder'));
-console.log('esm-smoke: import { Jsonix } from "@mitre/jsonix" and the .mjs mapping work together');
+console.log('esm-smoke: import { Jsonix } from "@mitre/jsonix" and the .mjs mapping work together; parent pointers and deepCopy behave as declared');

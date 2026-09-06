@@ -67,6 +67,16 @@ const fromInterface: Jsonix.TypedNamedValue = new Jsonix.Context([handWritten]).
 // Mixed generated and hand-written mappings: the generated one's root elements survive.
 const mixed: RootElement | Jsonix.TypedNamedValue = new Jsonix.Context([PO, handWritten]).createUnmarshaller().unmarshalString(xml);
 
+// (e) Parent pointers and deep copy (jsonix-CR-002).
+const parentedContext = new Jsonix.Context([PO], { parentPointers: true });
+const parentedPo = parentedContext.createUnmarshaller().unmarshalString<PurchaseOrderElement>(xml).value;
+const copiedPo: PurchaseOrderType = Jsonix.Util.deepCopy(parentedPo);
+const copiedAddress: USAddress = Jsonix.Util.deepCopy(parentedPo.shipTo, parentedPo);
+const asParented: Jsonix.Parented<PurchaseOrderType> = parentedPo.shipTo;
+Jsonix.Util.setParent(copiedAddress, copiedPo);
+// @ts-expect-error setParent needs an object
+Jsonix.Util.setParent('not an object', copiedPo);
+
 // (b) A generated interface is enough for the runtime's own QName / Calendar types.
 const runtimeCalendar: Jsonix.XML.Calendar | undefined = shipDate;
 const runtimeName: Jsonix.XML.QName = element.name;
@@ -91,6 +101,6 @@ marshaller.marshalString({ foo: 'bar' });
 
 export {
   name, zip, year, comment, typeName, itemParent, addressParent, rootParent, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
-  untypedName, untypedValue, fromInterface, mixed, runtimeCalendar, runtimeName,
+  untypedName, untypedValue, fromInterface, mixed, copiedPo, copiedAddress, asParented, runtimeCalendar, runtimeName,
   out, doc, misspelt, wrongType, incomplete,
 };

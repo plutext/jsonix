@@ -8,6 +8,7 @@ Jsonix.Context = Jsonix
 			substitutionMembersMap : null,
 			scopedElementInfosMap : null,
 			supportXsiType : true,
+			parentPointers : false,
 			initialize : function(mappings, options) {
 				Jsonix.Mapping.Styled.prototype.initialize.apply(this, [options]);
 				this.modules = [];
@@ -31,6 +32,9 @@ Jsonix.Context = Jsonix
 					if (Jsonix.Util.Type
 							.isBoolean(options.supportXsiType)) {
 						this.supportXsiType = options.supportXsiType; 
+					}
+					if (Jsonix.Util.Type.isBoolean(options.parentPointers)) {
+						this.parentPointers = options.parentPointers;
 					}
 				}
 				

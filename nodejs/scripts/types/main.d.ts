@@ -91,6 +91,32 @@ export namespace Jsonix {
     supportXsiType?: boolean;
     /** The mapping style, by name or as a custom style object. Defaults to 'standard'. */
     mappingStyle?: 'standard' | 'simplified' | object;
+    /**
+     * When true, every typed object the unmarshaller creates (objects with TYPE_NAME, or
+     * instanceFactory instances) gets a non-enumerable PARENT property pointing at the nearest
+     * enclosing typed object; root objects have none. Element wrappers, maps, calendars, QNames
+     * and DOM nodes never get one. Defaults to false. Generated declarations type PARENT as the
+     * union of the types that can contain each type.
+     */
+    parentPointers?: boolean;
+  }
+
+  /** Convenience for hand-written types: an object that may carry a parent pointer. Generated declarations inline the union. */
+  export interface Parented<P = unknown> {
+    readonly PARENT?: P;
+  }
+
+  export namespace Util {
+    /**
+     * Copies a value structurally: primitives are shared; QNames, calendars and DOM nodes are
+     * cloned; arrays and plain objects (including element wrappers, durations, maps and typed
+     * objects, keeping TYPE_NAME) are copied recursively, own enumerable properties only. An
+     * object referenced twice is copied once. PARENT pointers inside the copy are re-linked to
+     * the copied parents; the copy's own PARENT is `parent` if given, otherwise unset.
+     */
+    function deepCopy<T>(value: T, parent?: unknown): T;
+    /** Defines a non-enumerable, writable PARENT on `value` (no-op for non-objects). */
+    function setParent(value: object, parent: unknown): void;
   }
 
   /**

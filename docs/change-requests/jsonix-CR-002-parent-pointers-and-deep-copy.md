@@ -1,7 +1,7 @@
 # jsonix-CR-002: Parent pointers and deep copy for unmarshalled objects
 
-**Status:** Draft (2026-09-07), proposed from the compiler repository; revised 2026-09-07 after review
-against the runtime (see "Revision notes")
+**Status:** Implemented (2026-09-07), version 3.2.0; proposed from the compiler repository, revised after review
+against the runtime (see "Revision notes"), then implemented as revised (see "Implementation notes")
 **Depends on:** jsonix-CR-001 (3.1.0 typings and ES-module entry point)
 **Companion:** `jsonix-schema-compiler` CR-006, whose compiler half is implemented in commit `0b6a0d9` on branch
 `cr-006-parent-pointers` (generated declarations carry `readonly PARENT?: <union of containers>`; its
@@ -178,3 +178,45 @@ did not survive that check:
 
 Also added: the three-copies rule from `CLAUDE.md`, the fixture regeneration from `0b6a0d9`, the
 memory note, and the narrower cycle risk.
+
+## Implementation notes (2026-09-07)
+
+Implemented as revised, in all three copies of the library (`nodejs/scripts/jsonix.js`,
+`dist/Jsonix-all.js`, and the modular `Util.js`, `Model/ClassInfo.js`, `Context.js`,
+`XML/Calendar.js`), preserving each file's line endings (the bundles are CRLF, the modular sources LF).
+`dist/Jsonix-min.js` was not regenerated; it is stale for this feature, as `CLAUDE.md` now records.
+
+- `ClassInfo.unmarshal`: nine lines after the result is created (read the top of `input.parentStack`,
+  define `PARENT`, push) and three before `return result` (pop). No `try/finally`: an exception
+  discards the `Input` and the unmarshal call with it, so a stale entry cannot be observed.
+- `Context`: `parentPointers` field and option, next to `supportXsiType`.
+- `Jsonix.Util.setParent`, `Jsonix.Util.deepCopy`: as specified. `deepCopy` uses `Map` when present
+  and parallel arrays otherwise; copies plain objects with `Object.create(Object.getPrototypeOf(x))`
+  so `instanceFactory` instances keep their prototype; QNames, calendars, `Date`s and DOM nodes are
+  cloned; everything else is recursed over own enumerable properties. `PARENT` never travels as an
+  ordinary property because it is non-enumerable; it is re-linked afterwards from the original-to-copy
+  map, skipping the root, whose `PARENT` comes only from the `parent` argument.
+- `Jsonix.XML.Calendar.prototype.clone`: rebuilds through the constructor from the numeric fields
+  (NaN fields omitted, since the constructor validates what it is given), so the derived `date` is
+  recomputed.
+- Typings: `ContextOptions.parentPointers`, `Jsonix.Parented<P>`, `Jsonix.Util.deepCopy` and
+  `Jsonix.Util.setParent` (the first members of a `Jsonix.Util` namespace in the typings).
+- Tests (`tests/typescript/typescript.js`): pointers off by default; standard style (pointers on
+  typed objects only, none on the root, the wrapper, arrays or calendars; `Object.keys`, JSON,
+  `isEqual` and the marshalled XML identical to the unparented result; descriptor non-enumerable and
+  writable); simplified style (pointer lands on the typed object, not on the `{ localName: value }`
+  object); `deepCopy` of a tree, with a parent, of a wrapper, of a typed object with properties named
+  `name` and `value`, of a hand-built tree with shared references, durations, calendars and
+  primitives, and of a DOM node; `Calendar.clone`. `usage.ts` checks the typings and the
+  declaration-level `PARENT` (from compiler `0b6a0d9`); `esm-smoke.mjs` runs the same runtime checks
+  as the compiler's smoke test.
+
+Verification:
+
+| Check | Result |
+|-------|--------|
+| `npx nodeunit tests/typescript/typescript.js` | green, 98 assertions |
+| existing suites (`util`, `xml`, `schema`, `xsd`, `issues`, `sax`, `nodejs`) | green, 1265 assertions (the `Request` suite needs port 8080, in use on this machine) |
+| `npm run typecheck` (bundler and node16) | green |
+| `npm run test:esm` | green, including the parent pointer and `deepCopy` checks |
+| `dist/Jsonix-all.js` | loads and exposes `Jsonix.Util.deepCopy` (checked in a `vm` context) |

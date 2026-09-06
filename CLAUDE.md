@@ -39,13 +39,15 @@ The runtime exists as three checked-in copies that have **diverged** and are pat
 
 | Path | Role |
 |---|---|
-| `nodejs/scripts/jsonix.js` | The npm-published bundle (`main`). What the tests load. **Edit this one first.** |
+| `nodejs/scripts/jsonix.js` | The npm-published bundle (`main`). What the tests load. **Edit this one first.** CRLF line endings, as is `dist/Jsonix-all.js`; the modular sources are LF. |
 | `scripts/src/main/javascript/org/hisrc/jsonix/` | Modular upstream sources, one class per file. Concatenated by Maven in the order listed in `scripts/src/main/resources/org/hisrc/jsonix/Jsonix.scripts` between `Jsonix.header.fragmentjs` / `Jsonix.footer.fragmentjs`. |
 | `dist/Jsonix-all.js`, `dist/Jsonix-min.js` | Browser/bower bundle. |
 
 Recent fixes (e.g. the `var p` fix, the `@xmldom/xmldom` rename, the try/catch module footer) were applied
 directly to one or more bundles, not regenerated. When changing library behaviour, change `nodejs/scripts/jsonix.js`,
-then mirror the same edit into the modular source file and `dist/` so the copies don't drift further. Note the Node
+then mirror the same edit into the modular source file and `dist/Jsonix-all.js` so the copies don't drift further
+(jsonix-CR-002 did this for `parentPointers` / `deepCopy`). `dist/Jsonix-min.js` cannot be patched by hand for anything
+beyond a one-liner and has not been regenerated since; treat it as stale until the Maven pipeline is revived. Note the Node
 bundle's footer intentionally differs from the modular footer: it requires `@xmldom/xmldom` (not `xmldom`) and falls
 back to `module.exports = _jsonix_factory()` when `amdefine` is unavailable (webpack compatibility).
 
@@ -64,6 +66,7 @@ typings but hard-code the runtime's data representation. The contract, guarded b
 | `XmlQName` fields `namespaceURI`, `localPart`, `prefix`, `key`, `string` | `Jsonix.XML.QName` |
 | `XmlCalendar` fields `year` … `timezone`, unset = `NaN` | `Jsonix.XML.Calendar` (never a JS `Date`) |
 | `XmlDuration` fields `sign`, `years`, `months`, `days`, `hours`, `minutes`, `seconds` | `Jsonix.Schema.XSD.Duration` |
+| `readonly PARENT?: <union of containers>` on class interfaces only | set by `ClassInfo.unmarshal` from a result stack on the `Input` when `context.parentPointers` is on; non-enumerable; never on wrappers, maps, calendars, QNames, DOM nodes |
 
 Changing any of these in `jsonix.js` breaks every generated `.d.ts` in the wild. `types/main.d.ts` (hand-written, a
 proper ES module with `export namespace Jsonix`, plus deprecated global aliases for the pre-3.1 names) mirrors the same
@@ -73,6 +76,10 @@ casts. `Context<M>` infers `M` from its mappings and reads the phantom `__rootEl
 `unmarshal*` default to that union (hand-written mappings fall back to `TypedNamedValue<unknown>`). Update the file when
 the public API changes; `tests/typescript/usage.ts` and `usage.node16.mts` must keep compiling and their
 `@ts-expect-error` lines must keep failing.
+
+`Jsonix.Util.deepCopy(value, parent?)` copies structurally (no shape heuristics) and re-links `PARENT` from a map of
+original to copy; a copy's own `PARENT` is unset unless `parent` is given. `Jsonix.Util.setParent` is the one place
+that defines the property. These live in `Util` (bundles: before `Jsonix.Class`; modular: `Util.js`).
 
 Packaging: `package.json` has an `exports` map (`import` → `jsonix.mjs`, a thin ESM wrapper over the CommonJS bundle;
 `require` → `jsonix.js`; `./jsonix.js` kept as a subpath for deep imports). Keep `jsonix.mjs` out of `.npmignore`.

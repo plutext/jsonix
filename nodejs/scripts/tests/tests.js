@@ -9,9 +9,10 @@ module.exports =
 		"XML" : require('./xml'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
-		"Request" : require('./request'),
 		"SAX" : require('./sax'),
 		"Issues" : require('./issues'),
-		"TypeScript" : require('./typescript/typescript')
+		"TypeScript" : require('./typescript/typescript'),
+		// Last: it binds port 8080 and aborts the run when the port is taken.
+		"Request" : require('./request')
 	}
 };

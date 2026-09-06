@@ -119,6 +119,11 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
   type usable as a discriminant. It is optional on input; you need not set it when marshalling.
 * The compiler can also write the mapping as an ES module (`<jsonix:output format="esm"/>` gives `PO.mjs`), and this
   package has an ES-module entry point, so `import { Jsonix } from '@mitre/jsonix'` works in Node ESM and bundlers.
+* `new Jsonix.Context(mappings, { parentPointers: true })` gives every unmarshalled typed object a non-enumerable
+  `PARENT` pointing at its containing typed object (root objects have none), and `Jsonix.Util.deepCopy(value, parent?)`
+  copies a subtree and re-links the pointers, like docx4j's `-Xparent-pointer` / `-Xdocx4j-copy` model. Generated
+  declarations type `PARENT` as the union of the types that can contain each type. `PARENT` is invisible to
+  `for...in`, `Object.keys`, JSON and the marshaller.
 
 ## Jsonix Features
 

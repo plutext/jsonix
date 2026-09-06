@@ -119,6 +119,15 @@ Jsonix.Model.ClassInfo = Jsonix
 					result = { TYPE_NAME : this.name }; 
 				}
 				
+				// Parent pointers (jsonix-CR-002): the nearest enclosing typed object is the top of the per-run stack.
+				var parentStack = null;
+				if (context.parentPointers) {
+					parentStack = input.parentStack || (input.parentStack = []);
+					if (parentStack.length > 0) {
+						Jsonix.Util.setParent(result, parentStack[parentStack.length - 1]);
+					}
+					parentStack.push(result);
+				}
 				if (input.eventType !== 1) {
 					throw new Error("Parser must be on START_ELEMENT to read a class info.");
 				}
@@ -200,6 +209,9 @@ Jsonix.Model.ClassInfo = Jsonix
 				}
 				if (input.eventType !== 2) {
 					throw new Error("Illegal state: must be END_ELEMENT.");
+				}
+				if (parentStack) {
+					parentStack.pop();
 				}
 				return result;
 			},
