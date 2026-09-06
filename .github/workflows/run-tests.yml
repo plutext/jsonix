@@ -28,3 +28,11 @@ jobs:
       - name: Run test scripts
         working-directory: ./nodejs/scripts
         run: npm run test
+
+      - name: Type-check generated declarations against the runtime typings
+        working-directory: ./nodejs/scripts
+        run: npm run typecheck
+
+      - name: ES-module import smoke test
+        working-directory: ./nodejs/scripts
+        run: npm run test:esm

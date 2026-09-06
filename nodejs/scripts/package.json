@@ -1,6 +1,6 @@
 {
 	"name": "@mitre/jsonix",
-	"version": "3.0.11",
+	"version": "3.1.0",
 	"description": "Jsonix (JSON interfaces for XML) is a JavaScript library which allows converting between XML and JSON structures.",
 	"keywords": [
 		"json",
@@ -45,13 +45,25 @@
 		}
 	],
 	"main": "jsonix.js",
+	"module": "jsonix.mjs",
 	"repository": {
 		"type": "git",
 		"url": "http://github.com/mitre/jsonix.git"
 	},
 	"types": "./types/main.d.ts",
+	"exports": {
+		".": {
+			"types": "./types/main.d.ts",
+			"import": "./jsonix.mjs",
+			"require": "./jsonix.js"
+		},
+		"./jsonix.js": "./jsonix.js",
+		"./package.json": "./package.json"
+	},
 	"scripts": {
-		"test": "nodeunit tests/tests.js"
+		"test": "nodeunit tests/tests.js",
+		"typecheck": "tsc -p tests/typescript/tsconfig.json && tsc -p tests/typescript/tsconfig.node16.json",
+		"test:esm": "node tests/typescript/esm-smoke.mjs"
 	},
 	"dependencies": {
 		"@xmldom/xmldom": "^0.9.7",
@@ -60,6 +72,7 @@
 	},
 	"devDependencies": {
 		"node-static": "^0.7.11",
-		"nodeunit": "^0.11.3"
+		"nodeunit": "^0.11.3",
+		"typescript": "~5.6.3"
 	}
 }

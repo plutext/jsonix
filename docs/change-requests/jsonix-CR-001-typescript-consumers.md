@@ -1,6 +1,6 @@
 # jsonix-CR-001: Support TypeScript consumers of compiler-generated declarations and ES-module mappings
 
-**Status:** Proposed (2026-09-06)
+**Status:** Implemented (2026-09-06), items 1 to 5; item 6 is tracked in the compiler repository
 **Depends on:** `jsonix-schema-compiler` CR-005 (TypeScript output, implemented 2026-09-06, commit `0b2c8a8`),
 which in turn builds on its CR-003 (deterministic output) and CR-004 (Jakarta XML Binding 4)
 **Repository:** `@mitre/jsonix` runtime (this repository); the compiler lives in the sibling
@@ -385,3 +385,40 @@ reorder of the committed mappings. About half a day, and it still needs a Java t
 | 6. Compiler follow-ups | tracked there |
 
 Recommended order: 1, 3 (which proves 1), 2, 5, 4. Items 1 to 3 are one release (3.1.0).
+
+## Implementation notes (2026-09-06)
+
+Implemented in the recommended order (1, 3, 2, 5, 4) as one change set, version 3.1.0.
+Deviations and additions found while doing it:
+
+- **`types/main.d.ts` is now a proper ES module** (`export namespace Jsonix { ... }`) instead of an
+  ambient `declare module '@mitre/jsonix'` script. The pre-3.1 global interface names
+  (`Unmarshaller`, `Marshaller`, `QName`, `TypeInfo`, `ClassInfo`, …) are kept as deprecated
+  `declare global` aliases extending the `Jsonix.*` ones, so existing annotations still compile.
+- **`ContextOptions` ported.** PR #53 had added the `options` parameter of the `Context`
+  constructor to the abandoned draft `typescript/src/main/typescript/Jsonix.d.ts`, not to the
+  published `types/main.d.ts`; it is now in the published file.
+- **`unmarshalString()` without a type argument** returns `TypedNamedValue<unknown>` (so
+  `.name.localPart` is typed and `.value` is `unknown`), not a bare record.
+- **Two type-check configurations.** `usage.ts` under `moduleResolution: bundler` and
+  `usage.node16.mts` under `node16`. A CommonJS-context `.ts` file cannot statically import an
+  `.mjs` under `node16` rules (TS1479), which is correct Node behaviour, so the `node16` check
+  uses an `.mts` file with extensioned relative imports; that is what a Node ESM consumer writes.
+  `npm run typecheck` runs both.
+- **`.npmignore` gains `tests`** so a local `npm pack` matches what the publish workflow ships.
+- **`module` field** added next to `exports` for older bundlers.
+- **Item 4:** `nodejs/tests` and `nodejs/demos` deleted (165 tracked files) and the `tests`
+  module removed from `nodejs/pom.xml`; `demos/` and `fiddles/` kept with a note in `CLAUDE.md`
+  and the README that their `.xjb` files predate the Jakarta namespace.
+- The `docs/change-requests/README.md` index was added with this CR.
+
+Verification (Node 18.18.1 locally; CI pins Node 22):
+
+| Check | Result |
+|-------|--------|
+| `npm run typecheck` (bundler + node16) | green; with the pre-3.1 `types/main.d.ts` swapped in, `usage.ts` fails with TS2739, TS2345 (twice), TS2740, TS2694 and unused `@ts-expect-error`, i.e. the errors from "Motivation" plus the new API surface |
+| `npm test` | green apart from the pre-existing `Request` suite, which needs port 8080 (in use on this machine); the new `TypeScript` suite passes: 29 assertions (shape, round trip, marshalling a literal without `TYPE_NAME`) |
+| `npm run test:esm` | green: `import { Jsonix } from '@mitre/jsonix'` resolves through the `exports` map by self-reference, unmarshals `po.xml` via `PurchaseOrder.mjs` |
+| `require('@mitre/jsonix')`, `import j from '@mitre/jsonix'`, `require('@mitre/jsonix/jsonix.js')` | all work |
+| `npm pack` | `jsonix.js`, `jsonix.mjs`, `types/main.d.ts`, `package.json`, `README.md`, `jsonschemas/`; no `tests/` |
+| Generated fixtures vs the compiler's golden `PurchaseOrder.d.ts` | byte-identical (compiler commit `0b2c8a8`) |

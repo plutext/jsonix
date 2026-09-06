@@ -1,323 +1,305 @@
 /**
- * (description)
+ * Type declarations for the @mitre/jsonix runtime.
  *
- * @interface Unmarshaller
+ * The data shapes below (TypedNamedValue, XML.QName, XML.Calendar, XML.Duration and the
+ * TYPE_NAME discriminant) are a contract with the declaration files that
+ * jsonix-schema-compiler emits with -generateTypeScript: generated files carry their own
+ * structurally identical copies, so anything the runtime returns can be typed with a
+ * generated element type, and anything typed with a generated type can be marshalled.
+ * tests/typescript guards that contract. Change them together or not at all.
  */
-interface Unmarshaller {  //TODO: <T> @see createUnmarshaller
-  /**
-   * (description)
-   *
-   * @param {string} arg (description)
-   * @returns {Record<string, unknown>} (description)
-   */
-  unmarshalString(arg: string): Record<string, unknown>;
 
-  /**
-   * (description)
-   *
-   * @param {string} fileName (description)
-   * @param {(unmarshalled:Record<string, unknown>)=> void} callback (description)
-   * @param {Record<string, unknown>} options (description)
-   */
-  unmarshalFile(fileName: string, callback: (unmarshalled: Record<string, unknown>) => void, options: Record<string, unknown>): void;
+export namespace Jsonix {
+  export namespace XML {
+    /**
+     * A qualified name (Jsonix.XML.QName). Runtime instances always carry every field;
+     * marshal input may give only namespaceURI and localPart.
+     */
+    export interface QName {
+      namespaceURI: string;
+      localPart: string;
+      prefix?: string;
+      /** "{namespaceURI}localPart" */
+      key?: string;
+      /** "prefix:localPart" */
+      string?: string;
+    }
 
+    /**
+     * The representation of xs:date, xs:time, xs:dateTime and the xs:g* types
+     * (Jsonix.XML.Calendar). Unset fields are NaN. Jsonix never returns a JavaScript Date.
+     */
+    export interface Calendar {
+      year?: number;
+      month?: number;
+      day?: number;
+      hour?: number;
+      minute?: number;
+      second?: number;
+      fractionalSecond?: number;
+      timezone?: number;
+    }
 
-  /**
-   * (description)
-   *
-   * @param {string} url (description)
-   * @param {(unmarshalled:Record<string, unknown>)=> void} callback (description)
-   * @param {Record<string, unknown>} options (description)
-   */
-  unmarshalURL(url: string, callback: (unmarshalled: Record<string, unknown>) => void, options: Record<string, unknown>): void;
-
-  /**
-   * (description)
-   *
-   * @param {Element} doc (description)
-   * @param {string} scope (description)
-   * @returns {Record<string, unknown>} (description)
-   */
-  unmarshalDocument(doc: Element, scope: string): Record<string, unknown>;
-}
-/**
-* (description)
-*
-* @interface Marshaller
-*/
-interface Marshaller { // TODO: generics like marshalString(object:T):string;
-  /**
-   * (description)
-   *
-   * @param {Record<string, unknown>} object (description)
-   * @returns {string} (description)
-   */
-  marshalString(object: Record<string, unknown>): string;
-
-  /**
-   * (description)
-   *
-   * @param {Record<string, unknown>} object (description)
-   * @returns {Element} (description)
-   */
-  marshalDocument(object: Record<string, unknown>): Element;
-}
-
-declare module '@mitre/jsonix' {
-  export namespace Jsonix {
-    export class Context {
-      /**
-       * Creates an instance of Context.
-       *
-       * @param {any[]} s (description)
-       */
-      constructor(s: any[]);
-
-      /**
-       * (description)
-       *
-       * @param {string} name (description)
-       * @returns {TypeInfo} (description)
-       */
-      getTypeInfoByName(name: string): TypeInfo;
-
-      /**
-       * (description)
-       *
-       * @param {string} typeName (description)
-       * @returns {TypeInfo} (description)
-       */
-      getTypeInfoByTypeName(typeName: string): TypeInfo;
-
-      /**
-       * (description)
-       *
-       * @param {string} typeNameKey (description)
-       * @returns {TypeInfo} (description)
-       */
-      getTypeInfoByTypeNameKey(typeNameKey: string): TypeInfo;
-
-      getElementInfo(name: string, scope: string): any;
-
-      getSubstitutionMembers(name: string): any;
-
-      createMarshaller(): Marshaller;
-
-      createUnmarshaller(): Unmarshaller;
-
-      //TODO: createUnmarshaller<T>(type: T): Unmarshaller<T>;
-
-      getNamespaceURI(prefix: string): any;
-
-      getPrefix(namespaceURI: string, defaultPrefix: string): any;
-
-      builtinTypeInfos: {
-        Jsonix: {
-          Schema: {
-            XSD: {
-              AnyType: { INSTANCE: {} };
-              AnySimpleType: { INSTANCE: {} };
-              AnyURI: { INSTANCE: {} };
-              Base64Binary: { INSTANCE: {} };
-              Boolean: { INSTANCE: {} };
-              Byte: { INSTANCE: {} };
-              Calendar: { INSTANCE: {} };
-              DateAsDate: { INSTANCE: {} };
-              Date: { INSTANCE: {} };
-              DateTimeAsDate: { INSTANCE: {} };
-              DateTime: { INSTANCE: {} };
-              Decimal: { INSTANCE: {} };
-              Double: { INSTANCE: {} };
-              Duration: { INSTANCE: {} };
-              Float: { INSTANCE: {} };
-              GDay: { INSTANCE: {} };
-              GMonth: { INSTANCE: {} };
-              GMonthDay: { INSTANCE: {} };
-              GYear: { INSTANCE: {} };
-              GYearMonth: { INSTANCE: {} };
-              HexBinary: { INSTANCE: {} };
-              ID: { INSTANCE: {} };
-              IDREF: { INSTANCE: {} };
-              IDREFS: { INSTANCE: {} };
-              Int: { INSTANCE: {} };
-              Integer: { INSTANCE: {} };
-              Language: { INSTANCE: {} };
-              Long: { INSTANCE: {} };
-              Name: { INSTANCE: {} };
-              NCName: { INSTANCE: {} };
-              NegativeInteger: { INSTANCE: {} };
-              NMToken: { INSTANCE: {} };
-              NMTokens: { INSTANCE: {} };
-              NonNegativeInteger: { INSTANCE: {} };
-              NonPositiveInteger: { INSTANCE: {} };
-              NormalizedString: { INSTANCE: {} };
-              Number: { INSTANCE: {} };
-              PositiveInteger: { INSTANCE: {} };
-              QName: { INSTANCE: {} };
-              Short: { INSTANCE: {} };
-              String: { INSTANCE: {} };
-              Strings: { INSTANCE: {} };
-              TimeAsDate: { INSTANCE: {} };
-              Time: { INSTANCE: {} };
-              Token: { INSTANCE: {} };
-              UnsignedByte: { INSTANCE: {} };
-              UnsignedInt: { INSTANCE: {} };
-              UnsignedLong: { INSTANCE: {} };
-              UnsignedShort: { INSTANCE: {} };
-            }
-          }
-        }
-      }[];
-
-
-      // private
-      elementInfos: ClassInfo[];
-
+    /** The representation of xs:duration values. sign is 1 or -1. */
+    export interface Duration {
+      sign?: number;
+      years?: number;
+      months?: number;
+      days?: number;
+      hours?: number;
+      minutes?: number;
+      seconds?: number;
     }
   }
-}
 
-
-/**
-* (description)
-*
-* @interface Styled
-*/
-interface Styled {
-  CLASS_NAME: string;
-  mappingStyle: Object;
-}
-
-//TODO: package Schema.XSD
-/**
-* (description)
-*
-* @interface QName
-*/
-interface QName {
-  CLASS_NAME: string;
-  key: string;
-  namespaceURI: string;
-  localPart: string;
-  prefix: string;
-  string: string;
-}
-
-//TODO: package mapping
-/**
-* (description)
-*
-* @interface TypeInfo
-*/
-interface TypeInfo {
-  name: string;
-  baseTypeInfo: TypeInfo;
-}
-
-/**
-* (description)
-*
-* @interface EnumLeafInfo
-* @extends {TypeInfo}
-*/
-interface EnumLeafInfo extends TypeInfo {
-  name: string;
-  baseTypeInfo: TypeInfo;
-  entries: { [name: string]: string };
-  keys: { [index: number]: string };
-  values: { [index: number]: string };
-  built: boolean;
-
-}
-
-
-/**
-* (description)
-*
-* @interface PropertyInfo
-*/
-interface PropertyInfo {
-  CLASS_NAME: string;
-  name: string;
-  collection: boolean;
-  targetNamespace: string;
-  defaultElementNamespaceURI: string;
-  defaultAttributeNamespaceURI: string;
-  built: boolean;
-}
-
-/**
-* (description)
-*
-* @interface AbstractElementPropertyInfo
-* @extends {PropertyInfo}
-*/
-interface AbstractElementPropertyInfo extends PropertyInfo {
-  wrapperElement: QName;
-  allowDom: boolean;
-  allowTypedObject: boolean;
-  mixed: boolean;
-}
-
-
-/**
-* (description)
-*
-* @interface ElementPropertyInfo
-* @extends {AbstractElementPropertyInfo}
-*/
-interface ElementPropertyInfo extends AbstractElementPropertyInfo {
-  typeInfo: TypeInfo | string;
-  elementName: QName;
-}
-
-
-/**
-* (description)
-*
-* @interface ClassInfo
-* @extends {TypeInfo}
-* @extends {Styled}
-*/
-interface ClassInfo extends TypeInfo, Styled {
-  CLASS_NAME: string;
-  localName: string;
-  typeName: QName;
-  instanceFactory: {};
-  properties: { [index: number]: PropertyInfo };
-  propertiesMap: { [name: string]: PropertyInfo };
-  //is inner class
-  structure: {
-    elements: { [fqn: string]: PropertyInfo };
-    attributes: {};
-    anyAttribute: {};
-    value: {};
-    any: {}
-  };
-  targetNamespace: string;
-  defaultElementNamespaceURI: string;
-  defaultAttributeNamespaceURI: string
-  built: boolean;
-  //TODO: confirm this syntax
-  propertyInfoCreators: {
-    aa: { aa: any };
-    anyAttribute: { aa: any };
-    ae: { ae: any };
-    anyElement: { ae: any };
-    a: { a: any };
-    attribute: { a: any };
-    em: { em: any };
-    elementMap: { em: any };
-    e: { e: any };
-    element: { e: any };
-    es: { es: any };
-    elements: { es: any };
-    er: { er: any };
-    elementRef: { er: any };
-    ers: { ers: any };
-    elementRefs: { ers: any };
-    v: { v: any };
-    value: { v: any }
+  /**
+   * An element: what an unmarshaller returns, what a marshaller accepts, and the value of an
+   * elementRef property. Generated declarations alias this per global element, for example
+   * `type PurchaseOrderElement = TypedNamedValue<PurchaseOrderType>`.
+   */
+  export interface TypedNamedValue<T = unknown> {
+    name: XML.QName;
+    value: T;
   }
 
+  /**
+   * A mapping module as consumed by `new Jsonix.Context([...])`: a plain object generated by
+   * jsonix-schema-compiler (declared there as `JsonixMapping`) or written by hand.
+   */
+  export type Mapping = object;
+
+  export interface ContextOptions {
+    /** Maps namespace URIs to the prefixes used when marshalling. */
+    namespacePrefixes?: { [namespaceURI: string]: string };
+    /** Whether xsi:type attributes are honoured when unmarshalling and written when marshalling. Defaults to true. */
+    supportXsiType?: boolean;
+    /** The mapping style, by name or as a custom style object. Defaults to 'standard'. */
+    mappingStyle?: 'standard' | 'simplified' | object;
+  }
+
+  /**
+   * Options for unmarshalURL (passed to the XMLHttpRequest transport) and unmarshalFile
+   * (passed to fs.readFile).
+   */
+  export type UnmarshalOptions = object;
+
+  export interface Unmarshaller {
+    /** Parses an XML string. Type the result with a generated element type: `unmarshalString<PurchaseOrderElement>(xml)`. */
+    unmarshalString<E extends TypedNamedValue = TypedNamedValue>(text: string): E;
+    /** Unmarshals a DOM document (or element). */
+    unmarshalDocument<E extends TypedNamedValue = TypedNamedValue>(doc: Node, scope?: unknown): E;
+    /** Loads the URL with XMLHttpRequest and unmarshals the response. */
+    unmarshalURL<E extends TypedNamedValue = TypedNamedValue>(
+      url: string,
+      callback: (unmarshalled: E) => void,
+      options?: UnmarshalOptions
+    ): void;
+    /** Node.js only: reads the file and unmarshals it. Throws in environments without a file system. */
+    unmarshalFile<E extends TypedNamedValue = TypedNamedValue>(
+      fileName: string,
+      callback: (unmarshalled: E) => void,
+      options?: UnmarshalOptions
+    ): void;
+  }
+
+  export interface Marshaller {
+    /** Serialises an element to an XML string. */
+    marshalString<E extends TypedNamedValue>(element: E): string;
+    /** Serialises an element to a DOM document. */
+    marshalDocument<E extends TypedNamedValue>(element: E): Document;
+  }
+
+  export class Context {
+    /**
+     * @param mappings Mapping modules (generated or hand-written). Cross-module references are
+     *   resolved by name, in any order.
+     * @param options Optional configuration.
+     */
+    constructor(mappings: Mapping[], options?: ContextOptions);
+
+    createUnmarshaller(): Unmarshaller;
+    createMarshaller(): Marshaller;
+
+    getTypeInfoByName(name: string): TypeInfo;
+    getTypeInfoByTypeName(typeName: string): TypeInfo;
+    getTypeInfoByTypeNameKey(typeNameKey: string): TypeInfo;
+    getElementInfo(name: string, scope: string): any;
+    getSubstitutionMembers(name: string): any;
+    getNamespaceURI(prefix: string): any;
+    getPrefix(namespaceURI: string, defaultPrefix: string): any;
+
+    builtinTypeInfos: {
+      Jsonix: {
+        Schema: {
+          XSD: {
+            AnyType: { INSTANCE: {} };
+            AnySimpleType: { INSTANCE: {} };
+            AnyURI: { INSTANCE: {} };
+            Base64Binary: { INSTANCE: {} };
+            Boolean: { INSTANCE: {} };
+            Byte: { INSTANCE: {} };
+            Calendar: { INSTANCE: {} };
+            DateAsDate: { INSTANCE: {} };
+            Date: { INSTANCE: {} };
+            DateTimeAsDate: { INSTANCE: {} };
+            DateTime: { INSTANCE: {} };
+            Decimal: { INSTANCE: {} };
+            Double: { INSTANCE: {} };
+            Duration: { INSTANCE: {} };
+            Float: { INSTANCE: {} };
+            GDay: { INSTANCE: {} };
+            GMonth: { INSTANCE: {} };
+            GMonthDay: { INSTANCE: {} };
+            GYear: { INSTANCE: {} };
+            GYearMonth: { INSTANCE: {} };
+            HexBinary: { INSTANCE: {} };
+            ID: { INSTANCE: {} };
+            IDREF: { INSTANCE: {} };
+            IDREFS: { INSTANCE: {} };
+            Int: { INSTANCE: {} };
+            Integer: { INSTANCE: {} };
+            Language: { INSTANCE: {} };
+            Long: { INSTANCE: {} };
+            Name: { INSTANCE: {} };
+            NCName: { INSTANCE: {} };
+            NegativeInteger: { INSTANCE: {} };
+            NMToken: { INSTANCE: {} };
+            NMTokens: { INSTANCE: {} };
+            NonNegativeInteger: { INSTANCE: {} };
+            NonPositiveInteger: { INSTANCE: {} };
+            NormalizedString: { INSTANCE: {} };
+            Number: { INSTANCE: {} };
+            PositiveInteger: { INSTANCE: {} };
+            QName: { INSTANCE: {} };
+            Short: { INSTANCE: {} };
+            String: { INSTANCE: {} };
+            Strings: { INSTANCE: {} };
+            TimeAsDate: { INSTANCE: {} };
+            Time: { INSTANCE: {} };
+            Token: { INSTANCE: {} };
+            UnsignedByte: { INSTANCE: {} };
+            UnsignedInt: { INSTANCE: {} };
+            UnsignedLong: { INSTANCE: {} };
+            UnsignedShort: { INSTANCE: {} };
+          };
+        };
+      };
+    }[];
+
+    // private
+    elementInfos: ClassInfo[];
+  }
+
+  // Mapping internals (as built by Context). These describe the mapping model, not the data.
+
+  export interface Styled {
+    CLASS_NAME: string;
+    mappingStyle: Object;
+  }
+
+  export interface TypeInfo {
+    name: string;
+    baseTypeInfo: TypeInfo;
+  }
+
+  export interface EnumLeafInfo extends TypeInfo {
+    name: string;
+    baseTypeInfo: TypeInfo;
+    entries: { [name: string]: string };
+    keys: { [index: number]: string };
+    values: { [index: number]: string };
+    built: boolean;
+  }
+
+  export interface PropertyInfo {
+    CLASS_NAME: string;
+    name: string;
+    collection: boolean;
+    targetNamespace: string;
+    defaultElementNamespaceURI: string;
+    defaultAttributeNamespaceURI: string;
+    built: boolean;
+  }
+
+  export interface AbstractElementPropertyInfo extends PropertyInfo {
+    wrapperElement: XML.QName;
+    allowDom: boolean;
+    allowTypedObject: boolean;
+    mixed: boolean;
+  }
+
+  export interface ElementPropertyInfo extends AbstractElementPropertyInfo {
+    typeInfo: TypeInfo | string;
+    elementName: XML.QName;
+  }
+
+  export interface ClassInfo extends TypeInfo, Styled {
+    CLASS_NAME: string;
+    localName: string;
+    typeName: XML.QName;
+    instanceFactory: {};
+    properties: { [index: number]: PropertyInfo };
+    propertiesMap: { [name: string]: PropertyInfo };
+    structure: {
+      elements: { [fqn: string]: PropertyInfo };
+      attributes: {};
+      anyAttribute: {};
+      value: {};
+      any: {};
+    };
+    targetNamespace: string;
+    defaultElementNamespaceURI: string;
+    defaultAttributeNamespaceURI: string;
+    built: boolean;
+    propertyInfoCreators: {
+      aa: { aa: any };
+      anyAttribute: { aa: any };
+      ae: { ae: any };
+      anyElement: { ae: any };
+      a: { a: any };
+      attribute: { a: any };
+      em: { em: any };
+      elementMap: { em: any };
+      e: { e: any };
+      element: { e: any };
+      es: { es: any };
+      elements: { es: any };
+      er: { er: any };
+      elementRef: { er: any };
+      ers: { ers: any };
+      elementRefs: { ers: any };
+      v: { v: any };
+      value: { v: any };
+    };
+  }
+}
+
+/**
+ * Backwards compatibility: versions up to 3.0.11 declared these as global (ambient) interfaces.
+ * Prefer the Jsonix.* names.
+ * @deprecated
+ */
+declare global {
+  /** @deprecated use Jsonix.Unmarshaller */
+  interface Unmarshaller extends Jsonix.Unmarshaller {}
+  /** @deprecated use Jsonix.Marshaller */
+  interface Marshaller extends Jsonix.Marshaller {}
+  /** @deprecated use Jsonix.XML.QName */
+  interface QName extends Jsonix.XML.QName {
+    CLASS_NAME: string;
+  }
+  /** @deprecated use Jsonix.Styled */
+  interface Styled extends Jsonix.Styled {}
+  /** @deprecated use Jsonix.TypeInfo */
+  interface TypeInfo extends Jsonix.TypeInfo {}
+  /** @deprecated use Jsonix.EnumLeafInfo */
+  interface EnumLeafInfo extends Jsonix.EnumLeafInfo {}
+  /** @deprecated use Jsonix.PropertyInfo */
+  interface PropertyInfo extends Jsonix.PropertyInfo {}
+  /** @deprecated use Jsonix.AbstractElementPropertyInfo */
+  interface AbstractElementPropertyInfo extends Jsonix.AbstractElementPropertyInfo {}
+  /** @deprecated use Jsonix.ElementPropertyInfo */
+  interface ElementPropertyInfo extends Jsonix.ElementPropertyInfo {}
+  /** @deprecated use Jsonix.ClassInfo */
+  interface ClassInfo extends Jsonix.ClassInfo {}
 }

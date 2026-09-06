@@ -14,11 +14,15 @@ All npm work happens in `nodejs/scripts` (that directory is the npm package root
 
 ```bash
 cd nodejs/scripts
-npm ci                                  # install (nodeunit, node-static are the only dev deps)
+npm ci                                  # install (dev deps: nodeunit, node-static, typescript)
 npm test                                # full suite: nodeunit tests/tests.js
 npx nodeunit tests/xsd.js               # one suite file
 npx nodeunit -t Integer tests/xsd.js    # one named test inside a file
+npm run typecheck                       # tsc over tests/typescript (bundler and node16 resolution)
+npm run test:esm                        # Node ESM import of the package + an .mjs mapping
 ```
+
+CI runs all three (`.github/workflows/run-tests.yml`).
 
 - The `Request` suite (`tests/request.js`) starts a `node-static` server on port 8080. If 8080 is in use the full
   run reports an "undone" failure (`EADDRINUSE`); this is environmental, not a code regression.
@@ -45,8 +49,31 @@ then mirror the same edit into the modular source file and `dist/` so the copies
 bundle's footer intentionally differs from the modular footer: it requires `@xmldom/xmldom` (not `xmldom`) and falls
 back to `module.exports = _jsonix_factory()` when `amdefine` is unavailable (webpack compatibility).
 
-TypeScript typings are hand-written in `nodejs/scripts/types/main.d.ts` (`declare module '@mitre/jsonix'`); update
-them when the public API changes.
+## TypeScript contract with jsonix-schema-compiler
+
+The sibling repository `../jsonix-schema-compiler` (this fork's build of the mapping generator; see its
+`docs/change-requests/`) emits, with `-generateTypeScript`, a `.d.ts` per mapping module describing the unmarshalled
+data, and with `<jsonix:output format="esm"/>` the mapping as an `.mjs`. Those files are independent of this package's
+typings but hard-code the runtime's data representation. The contract, guarded by `nodejs/scripts/tests/typescript`
+(see its README for how the fixtures were generated), is:
+
+| Generated declaration | Runtime |
+|---|---|
+| `TypedNamedValue<T>` = `{ name, value }` | what `unmarshal*` returns and `marshal*` accepts |
+| `TYPE_NAME?: 'PO.USAddress'` literal | set by `ClassInfo.unmarshal` to the type info's `name`; compared by `isInstance` |
+| `XmlQName` fields `namespaceURI`, `localPart`, `prefix`, `key`, `string` | `Jsonix.XML.QName` |
+| `XmlCalendar` fields `year` … `timezone`, unset = `NaN` | `Jsonix.XML.Calendar` (never a JS `Date`) |
+| `XmlDuration` fields `sign`, `years`, `months`, `days`, `hours`, `minutes`, `seconds` | `Jsonix.Schema.XSD.Duration` |
+
+Changing any of these in `jsonix.js` breaks every generated `.d.ts` in the wild. `types/main.d.ts` (hand-written, a
+proper ES module with `export namespace Jsonix`, plus deprecated global aliases for the pre-3.1 names) mirrors the same
+shapes and makes `unmarshalString<E>()` / `marshalString<E>()` generic so generated element types flow through without
+casts. Update it when the public API changes; `tests/typescript/usage.ts` must keep compiling and its
+`@ts-expect-error` lines must keep failing.
+
+Packaging: `package.json` has an `exports` map (`import` → `jsonix.mjs`, a thin ESM wrapper over the CommonJS bundle;
+`require` → `jsonix.js`; `./jsonix.js` kept as a subpath for deep imports). Keep `jsonix.mjs` out of `.npmignore`.
+Proposals for this repository live in `docs/change-requests/`.
 
 ## Architecture of the runtime
 
@@ -103,12 +130,10 @@ writer that manages namespace prefixes from `context.namespacePrefixes`); unmars
 
 ## Other directories (mostly legacy upstream)
 
-- `nodejs/tests/*`: standalone integration packages (po, wps, browserify, ...) that depend on a packed tgz and
-  `jsonix-schema-compiler`; not run in CI.
 - `scripts/src/test/javascript`: JsTestDriver browser tests for the modular sources; not run in CI.
 - `typescript/`: an early draft of typings plus a UML diagram, not published (the published typings are in
   `nodejs/scripts/types`).
 - `formats/gml-geojson`, `demos/`, `fiddles/`, `docs/Jsonix.pdf`: examples and documentation from upstream.
-- The README's `java -jar node_modules/jsonix/lib/jsonix-schema-compiler-full.jar` instruction is upstream
-  wording; the jar is not shipped in `@mitre/jsonix` (`lib/.npmignore` excludes it). Use the
-  `jsonix-schema-compiler` package or Maven artifact to generate mappings.
+- `demos/` and `fiddles/` binding files (`.xjb`) predate the Jakarta namespace and are silently ignored by the current
+  compiler; they are kept as historical samples only. The compiler jar is not shipped in `@mitre/jsonix`
+  (`lib/.npmignore` excludes it).

@@ -11,6 +11,7 @@ module.exports =
 		"NodeJS" : require('./nodejs'),
 		"Request" : require('./request'),
 		"SAX" : require('./sax'),
-		"Issues" : require('./issues')
+		"Issues" : require('./issues'),
+		"TypeScript" : require('./typescript/typescript')
 	}
 };

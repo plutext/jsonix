@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "node16",
+    "moduleResolution": "node16"
+  },
+  "files": [
+    "PurchaseOrder.d.ts",
+    "PurchaseOrder.d.mts",
+    "usage.node16.mts"
+  ]
+}

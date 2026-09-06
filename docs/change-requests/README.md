@@ -7,4 +7,4 @@ proposals frequently depend on.
 
 | CR | Title | Depends on | Status |
 |----|-------|------------|--------|
-| [jsonix-CR-001](jsonix-CR-001-typescript-consumers.md) | Support TypeScript consumers of compiler-generated declarations and ES-module mappings | compiler CR-005 | Proposed 2026-09-06 |
+| [jsonix-CR-001](jsonix-CR-001-typescript-consumers.md) | Support TypeScript consumers of compiler-generated declarations and ES-module mappings | compiler CR-005 | Implemented 2026-09-06 (3.1.0) |
