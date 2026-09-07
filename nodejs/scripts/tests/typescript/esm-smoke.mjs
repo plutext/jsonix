@@ -3,7 +3,7 @@
 // Run with `npm run test:esm`.
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { Jsonix } from '@mitre/jsonix';
+import { Jsonix } from '@docx4j/jsonix';
 import { PO } from './PurchaseOrder.mjs';
 
 const xml = readFileSync(new URL('./po.xml', import.meta.url), 'utf8');
@@ -31,4 +31,4 @@ assert.ok(Jsonix.Util.Type.isEqual(copy, parented));
 
 const text = context.createMarshaller().marshalString(element);
 assert.ok(text.startsWith('<?xml') || text.startsWith('<purchaseOrder'));
-console.log('esm-smoke: import { Jsonix } from "@mitre/jsonix" and the .mjs mapping work together; parent pointers and deepCopy behave as declared');
+console.log('esm-smoke: import { Jsonix } from "@docx4j/jsonix" and the .mjs mapping work together; parent pointers and deepCopy behave as declared');

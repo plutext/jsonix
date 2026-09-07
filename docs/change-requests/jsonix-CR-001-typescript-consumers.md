@@ -3,8 +3,9 @@
 **Status:** Implemented (2026-09-06), items 1 to 5; of item 6 the compiler has done the `JsonixMapping<RootElement>` part and this runtime infers from it
 **Depends on:** `jsonix-schema-compiler` CR-005 (TypeScript output, implemented 2026-09-06, commit `09dee1d`),
 which in turn builds on its CR-003 (deterministic output) and CR-004 (Jakarta XML Binding 4)
-**Repository:** `@mitre/jsonix` runtime (this repository); the compiler lives in the sibling
-`jsonix-schema-compiler` repository
+**Repository:** the Jsonix runtime (this repository), published as `@mitre/jsonix` when this CR was written and
+renamed to `@docx4j/jsonix` on 2026-09-07 (references to `@mitre/jsonix` below are historical); the compiler lives
+in the sibling `jsonix-schema-compiler` repository
 
 ## Summary
 

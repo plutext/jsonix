@@ -9,7 +9,7 @@
     "types": [],
     "skipLibCheck": false,
     "paths": {
-      "@mitre/jsonix": ["../.."]
+      "@docx4j/jsonix": ["../.."]
     }
   },
   "files": [

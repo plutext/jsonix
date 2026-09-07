@@ -6,7 +6,7 @@ against the runtime (see "Revision notes"), then implemented as revised (see "Im
 **Companion:** `jsonix-schema-compiler` CR-006, whose compiler half is implemented in commit `0b6a0d9` on branch
 `cr-006-parent-pointers` (generated declarations carry `readonly PARENT?: <union of containers>`; its
 `tests/typescript` smoke exercises `parentPointers` and `deepCopy` as soon as this runtime provides them)
-**Repository:** `@mitre/jsonix` runtime (this repository)
+**Repository:** `@docx4j/jsonix` runtime (this repository)
 
 ## Summary
 

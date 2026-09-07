@@ -94,7 +94,7 @@ Run the compiler with `-generateTypeScript` to get, next to each mapping file, a
 objects Jsonix unmarshals and marshals (`PO.d.ts`). Together with this package's own typings the results need no casts:
 
 ```ts
-import { Jsonix } from '@mitre/jsonix';
+import { Jsonix } from '@docx4j/jsonix';
 import { PO } from './mappings/PO';
 import type { PurchaseOrderElement, USAddress } from './mappings/PO';
 
@@ -118,7 +118,7 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
 * Unmarshalled objects carry `TYPE_NAME` (e.g. `'PO.USAddress'`), which the generated interfaces declare as a literal
   type usable as a discriminant. It is optional on input; you need not set it when marshalling.
 * The compiler can also write the mapping as an ES module (`<jsonix:output format="esm"/>` gives `PO.mjs`), and this
-  package has an ES-module entry point, so `import { Jsonix } from '@mitre/jsonix'` works in Node ESM and bundlers.
+  package has an ES-module entry point, so `import { Jsonix } from '@docx4j/jsonix'` works in Node ESM and bundlers.
 * `new Jsonix.Context(mappings, { parentPointers: true })` gives every unmarshalled typed object a non-enumerable
   `PARENT` pointing at its containing typed object (root objects have none), and `Jsonix.Util.deepCopy(value, parent?)`
   copies a subtree and re-links the pointers, like docx4j's `-Xparent-pointer` / `-Xdocx4j-copy` model. Generated
@@ -154,3 +154,9 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
 
 * [Jsonix GitHub Project](https://github.com/highsource/jsonix)
 * [Jsonix Wiki](https://github.com/highsource/jsonix/wiki)
+
+## Lineage
+
+Forked from [highsource/jsonix](https://github.com/highsource/jsonix) (Dr. Alexey Valikov) via [MITRE's fork](https://github.com/mitre/jsonix)
+(`@mitre/jsonix`, up to 3.0.11). From 3.2.0 maintained by [Plutext](https://www.plutext.com) at
+[plutext/jsonix](https://github.com/plutext/jsonix) and published as `@docx4j/jsonix`.

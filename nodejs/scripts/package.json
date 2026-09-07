@@ -1,5 +1,5 @@
 {
-	"name": "@mitre/jsonix",
+	"name": "@docx4j/jsonix",
 	"version": "3.2.0",
 	"description": "Jsonix (JSON interfaces for XML) is a JavaScript library which allows converting between XML and JSON structures.",
 	"keywords": [
@@ -20,14 +20,14 @@
 		"jaxb",
 		"jsonix"
 	],
-	"homepage": "http://github.com/mitre/jsonix",
+	"homepage": "https://github.com/plutext/jsonix",
 	"bugs": {
-		"url": "http://github.com/mitre/jsonix/issues"
+		"url": "https://github.com/plutext/jsonix/issues"
 	},
 	"licenses": [
 		{
 			"type": "(Apache-2.0 AND BSD-2-Clause)",
-			"url": "https://github.com/mitre/jsonix/raw/master/LICENSE"
+			"url": "https://github.com/plutext/jsonix/raw/master/LICENSE"
 		}
 	],
 	"author": {
@@ -42,13 +42,17 @@
 		{
 			"name": "MITRE SAF (C)",
 			"url": "https://saf.mitre.org"
+		},
+		{
+			"name": "Plutext Pty Ltd (Jason Harrop)",
+			"url": "https://www.plutext.com"
 		}
 	],
 	"main": "jsonix.js",
 	"module": "jsonix.mjs",
 	"repository": {
 		"type": "git",
-		"url": "http://github.com/mitre/jsonix.git"
+		"url": "https://github.com/plutext/jsonix.git"
 	},
 	"types": "./types/main.d.ts",
 	"exports": {

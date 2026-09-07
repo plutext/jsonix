@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-MITRE's fork of highsource/jsonix, published to npm as `@mitre/jsonix`. Jsonix converts XML <-> JavaScript objects
+Plutext's fork of the Jsonix runtime (repository `plutext/jsonix`, npm `@docx4j/jsonix` from 3.2.0; continues MITRE's
+`@mitre/jsonix`, which forked highsource/jsonix). Jsonix converts XML <-> JavaScript objects
 (unmarshal / marshal) driven by declarative mapping modules, usually generated from XSD by the separate
 `jsonix-schema-compiler` project. Everything that matters for the published package lives in `nodejs/scripts/`.
 
@@ -68,7 +69,10 @@ typings but hard-code the runtime's data representation. The contract, guarded b
 | `XmlDuration` fields `sign`, `years`, `months`, `days`, `hours`, `minutes`, `seconds` | `Jsonix.Schema.XSD.Duration` |
 | `readonly PARENT?: <union of containers>` on class interfaces only | set by `ClassInfo.unmarshal` from a result stack on the `Input` when `context.parentPointers` is on; non-enumerable; never on wrappers, maps, calendars, QNames, DOM nodes |
 
-Changing any of these in `jsonix.js` breaks every generated `.d.ts` in the wild. `types/main.d.ts` (hand-written, a
+Changing any of these in `jsonix.js` breaks every generated `.d.ts` in the wild. The reverse direction has one known
+source of churn: since compiler CR-007 the compiler emits attributes of multi-attribute-group types sorted by name
+(XJC's order was JVM-dependent), so regenerated fixtures for such schemas reorder once; only marshalled attribute order
+changes, the unmarshaller is order-independent, and it is not a runtime change. `types/main.d.ts` (hand-written, a
 proper ES module with `export namespace Jsonix`, plus deprecated global aliases for the pre-3.1 names) mirrors the same
 shapes and makes `unmarshalString<E>()` / `marshalString<E>()` generic so generated element types flow through without
 casts. `Context<M>` infers `M` from its mappings and reads the phantom `__rootElement` that generated
@@ -145,5 +149,5 @@ writer that manages namespace prefixes from `context.namespacePrefixes`); unmars
   `nodejs/scripts/types`).
 - `formats/gml-geojson`, `demos/`, `fiddles/`, `docs/Jsonix.pdf`: examples and documentation from upstream.
 - `demos/` and `fiddles/` binding files (`.xjb`) predate the Jakarta namespace and are silently ignored by the current
-  compiler; they are kept as historical samples only. The compiler jar is not shipped in `@mitre/jsonix`
+  compiler; they are kept as historical samples only. The compiler jar is not shipped in `@docx4j/jsonix`
   (`lib/.npmignore` excludes it).

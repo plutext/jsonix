@@ -1,7 +1,7 @@
 // The same checks as usage.ts, from an ES module under Node's own resolution rules
 // (moduleResolution node16): relative imports carry extensions, the .mjs mapping resolves to
 // its .d.mts, and the runtime resolves through the package's "exports" map.
-import { Jsonix } from '@mitre/jsonix';
+import { Jsonix } from '@docx4j/jsonix';
 import { PO } from './PurchaseOrder.mjs';
 import type { PurchaseOrderElement, RootElement, USAddress } from './PurchaseOrder.mjs';
 

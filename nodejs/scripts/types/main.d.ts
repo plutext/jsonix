@@ -1,5 +1,5 @@
 /**
- * Type declarations for the @mitre/jsonix runtime.
+ * Type declarations for the @docx4j/jsonix runtime.
  *
  * The data shapes below (TypedNamedValue, XML.QName, XML.Calendar, XML.Duration and the
  * TYPE_NAME discriminant) are a contract with the declaration files that

@@ -1,4 +1,4 @@
-name: Publish @mitre/jsonix to NPM
+name: Publish @docx4j/jsonix to NPM
 
 on:
   release:
@@ -38,4 +38,4 @@ jobs:
       
       - name: Publish to npm
         working-directory: ./nodejs/scripts
-        run: npm publish --access public mitre-jsonix-*.tgz
+        run: npm publish --access public docx4j-jsonix-*.tgz

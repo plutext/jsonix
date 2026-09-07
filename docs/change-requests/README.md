@@ -1,7 +1,7 @@
 # Change requests
 
-Numbered proposals for changes to this fork of the Jsonix runtime (`mitre/jsonix`, published as
-`@mitre/jsonix`; forked from `highsource/jsonix`). They are prefixed `jsonix-` to keep them distinct
+Numbered proposals for changes to this fork of the Jsonix runtime (`plutext/jsonix`, published as
+`@docx4j/jsonix`; continues MITRE's `@mitre/jsonix`, itself forked from `highsource/jsonix`). They are prefixed `jsonix-` to keep them distinct
 from the change requests of the sibling `jsonix-schema-compiler` repository, which this runtime's
 proposals frequently depend on.
 

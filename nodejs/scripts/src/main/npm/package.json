@@ -1,5 +1,5 @@
 {
-	"name": "jsonix",
+	"name": "@docx4j/jsonix",
 	"version": "${project.version}",
 	"description": "Jsonix (JSON interfaces for XML) is a JavaScript library which allows converting between XML and JSON structures.",
 	"keywords": [
@@ -20,14 +20,14 @@
 		"jaxb",
 		"jsonix"
 	],
-	"homepage": "http://github.com/highsource/jsonix",
+	"homepage": "https://github.com/plutext/jsonix",
 	"bugs": {
-		"url": "http://github.com/highsource/jsonix/issues"
+		"url": "https://github.com/plutext/jsonix/issues"
 	},
 	"licenses": [
 		{
 			"type": "BSD-3-Clause",
-			"url": "http://github.com/highsource/jsonix/raw/master/LICENSE"
+			"url": "https://github.com/plutext/jsonix/raw/master/LICENSE"
 		}
 	],
 	"author": {
@@ -38,12 +38,16 @@
 		{
 			"name": "Conrad Pankoff",
 			"url": "https://github.com/deoxxa"
+		},
+		{
+			"name": "Plutext Pty Ltd (Jason Harrop)",
+			"url": "https://www.plutext.com"
 		}
 	],
 	"main": "jsonix.js",
 	"repository": {
 		"type": "git",
-		"url": "http://github.com/mitre/jsonix.git"
+		"url": "https://github.com/plutext/jsonix.git"
 	},
 	"scripts": {
 		"test": "nodeunit tests/tests.js"

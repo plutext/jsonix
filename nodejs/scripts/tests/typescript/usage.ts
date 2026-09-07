@@ -1,7 +1,7 @@
 // Compile-time checks: the declarations that jsonix-schema-compiler generates for
 // purchaseorder.xsd must compose with the runtime's own typings without casts.
 // Run with `npm run typecheck`. Removing the generics from types/main.d.ts must make this fail.
-import { Jsonix } from '@mitre/jsonix';
+import { Jsonix } from '@docx4j/jsonix';
 import { PO } from './PurchaseOrder.std';
 import { PO as PO_ESM } from './PurchaseOrder.mjs';
 import type { PurchaseOrderElement, PurchaseOrderType, RootElement, USAddress, Items, XmlCalendar } from './PurchaseOrder.std';

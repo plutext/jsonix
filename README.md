@@ -94,7 +94,7 @@ Run the compiler with `-generateTypeScript` to get, next to each mapping file, a
 objects Jsonix unmarshals and marshals (`PO.d.ts`). Together with this package's own typings the results need no casts:
 
 ```ts
-import { Jsonix } from '@mitre/jsonix';
+import { Jsonix } from '@docx4j/jsonix';
 import { PO } from './mappings/PO';
 import type { PurchaseOrderElement, USAddress } from './mappings/PO';
 
@@ -118,7 +118,7 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
 * Unmarshalled objects carry `TYPE_NAME` (e.g. `'PO.USAddress'`), which the generated interfaces declare as a literal
   type usable as a discriminant. It is optional on input; you need not set it when marshalling.
 * The compiler can also write the mapping as an ES module (`<jsonix:output format="esm"/>` gives `PO.mjs`), and this
-  package has an ES-module entry point, so `import { Jsonix } from '@mitre/jsonix'` works in Node ESM and bundlers.
+  package has an ES-module entry point, so `import { Jsonix } from '@docx4j/jsonix'` works in Node ESM and bundlers.
 * `new Jsonix.Context(mappings, { parentPointers: true })` gives every unmarshalled typed object a non-enumerable
   `PARENT` pointing at its containing typed object (root objects have none), and `Jsonix.Util.deepCopy(value, parent?)`
   copies a subtree and re-links the pointers, like docx4j's `-Xparent-pointer` / `-Xdocx4j-copy` model. Generated
@@ -152,11 +152,13 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
 
 ## Documentation
 
-* [Original Jsonix GitHub Project](https://github.com/highsource/jsonix)
-* [Original Jsonix Wiki](https://github.com/highsource/jsonix/wiki)
-* [MITRE Jsonix GitHub Project](https://github.com/mitre/jsonix)
-* [MITRE Jsonix Wiki](https://github.com/mitre/jsonix/wiki)
+* [This project: plutext/jsonix](https://github.com/plutext/jsonix), published as `@docx4j/jsonix`
+* [MITRE Jsonix GitHub Project](https://github.com/mitre/jsonix) and [Wiki](https://github.com/mitre/jsonix/wiki) (`@mitre/jsonix`, up to 3.0.11)
+* [Original Jsonix GitHub Project](https://github.com/highsource/jsonix) and [Wiki](https://github.com/highsource/jsonix/wiki)
 
 ## Acknowledgements
 
 This library is a fork of https://github.com/highsource/jsonix originally created by [Dr. Alexey Valikov](https://good-bye.org/alexey-valikov/).
+It continues [MITRE's fork](https://github.com/mitre/jsonix), published as `@mitre/jsonix` up to 3.0.11; from 3.2.0 it is
+maintained by [Plutext](https://www.plutext.com) and published as `@docx4j/jsonix`, alongside the
+[jsonix-schema-compiler](https://github.com/plutext/jsonix-schema-compiler) fork and the docx4j Office Open XML bindings.
