@@ -52,7 +52,7 @@
 	"module": "jsonix.mjs",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/plutext/jsonix.git"
+		"url": "git+https://github.com/plutext/jsonix.git"
 	},
 	"types": "./types/main.d.ts",
 	"exports": {
