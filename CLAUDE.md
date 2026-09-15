@@ -151,3 +151,18 @@ writer that manages namespace prefixes from `context.namespacePrefixes`); unmars
 - `demos/` and `fiddles/` binding files (`.xjb`) predate the Jakarta namespace and are silently ignored by the current
   compiler; they are kept as historical samples only. The compiler jar is not shipped in `@docx4j/jsonix`
   (`lib/.npmignore` excludes it).
+
+## Portfolio task registry
+
+This repository's change requests are indexed, with their dependencies on work in the other
+docx4j repositories, in `../docx4j-portfolio/tasks.yaml` (ids `<repo>/<CR>[.<phase>]`; this
+repository's key is `jsonix`, so `jsonix-CR-003` is `jsonix/CR-003`).
+
+- When a CR's status changes (a phase lands; a CR is proposed, deferred or abandoned) or its
+  dependencies change, update the matching entry in `tasks.yaml` in the same session (`status`,
+  `depends_on`; add an entry for a new CR or phase).
+- Then run `python3 ../docx4j-portfolio/scripts/tasks.py check`. It reports `CHANGED` for each CR
+  whose Status line was edited; once the registry entry agrees, run `tasks.py accept` (and
+  `tasks.py graph` if dependencies changed).
+- Before starting a CR or phase, check `python3 ../docx4j-portfolio/scripts/tasks.py blocked`: it
+  may be waiting on work in another repository.
