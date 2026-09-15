@@ -1,6 +1,6 @@
 {
 	"name": "@docx4j/jsonix",
-	"version": "3.2.1",
+	"version": "3.2.2",
 	"description": "Jsonix (JSON interfaces for XML) is a JavaScript library which allows converting between XML and JSON structures.",
 	"keywords": [
 		"json",
@@ -24,12 +24,7 @@
 	"bugs": {
 		"url": "https://github.com/plutext/jsonix/issues"
 	},
-	"licenses": [
-		{
-			"type": "(Apache-2.0 AND BSD-2-Clause)",
-			"url": "https://github.com/plutext/jsonix/raw/master/LICENSE"
-		}
-	],
+	"license": "(Apache-2.0 AND BSD-2-Clause)",
 	"author": {
 		"name": "Alexey Valikov",
 		"url": "http://github.com/highsource"

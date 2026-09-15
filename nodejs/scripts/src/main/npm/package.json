@@ -24,12 +24,7 @@
 	"bugs": {
 		"url": "https://github.com/plutext/jsonix/issues"
 	},
-	"licenses": [
-		{
-			"type": "BSD-3-Clause",
-			"url": "https://github.com/plutext/jsonix/raw/master/LICENSE"
-		}
-	],
+	"license": "(Apache-2.0 AND BSD-2-Clause)",
 	"author": {
 		"name": "Alexey Valikov",
 		"url": "http://github.com/highsource"
