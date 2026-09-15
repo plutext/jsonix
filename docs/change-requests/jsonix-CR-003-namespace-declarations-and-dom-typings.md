@@ -178,5 +178,8 @@ marshal time matters (for example `@docx4j/core-ts` CR-001 phase B re-marshallin
 when another runtime consumer hits the 112-declaration root. Release as 3.3.0 when it comes.
 
 **Follow-ups on the consumer side after 3.2.1 is published:** `@docx4j/generated-objects-ts` raises
-its dependency to `^3.2.1` and removes its two casts (0.1.2); `@docx4j/core-ts` removes its
-`JsonixDom` cast and raises its range to that objects release.
+its dependency to `^3.2.1` and removes its three casts (two in `src/index.mts`, one in
+`src/builders/wml.mts`) as 0.1.2; `@docx4j/core-ts` removes its `JsonixDom` cast and raises its
+range to that objects release. Both were checked against 3.2.1 on scratch copies on 2026-09-15
+(typecheck and tests pass). Neither calls `createDocument` with arguments; the only `('', '')` call
+is inside `jsonix.js` itself, so the parameterless declaration breaks nothing.
