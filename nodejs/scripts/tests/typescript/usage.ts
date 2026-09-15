@@ -77,6 +77,22 @@ Jsonix.Util.setParent(copiedAddress, copiedPo);
 // @ts-expect-error setParent needs an object
 Jsonix.Util.setParent('not an object', copiedPo);
 
+// (f) Jsonix.DOM and Context.namespacePrefixes (jsonix-CR-003 part 1, 3.2.1).
+const parsed: Document = Jsonix.DOM.parse('<a/>');
+const serialized: string = Jsonix.DOM.serialize(parsed);
+const fresh: Document = Jsonix.DOM.createDocument();
+const domAvailable: boolean = Jsonix.DOM.isDomImplementationAvailable();
+const xlinkFix: boolean = Jsonix.DOM.isXlinkFixRequired();
+Jsonix.DOM.load('http://localhost/po.xml', (loaded: Document) => void loaded);
+const prefixes: { readonly [namespaceURI: string]: string } = context.namespacePrefixes;
+const perDocument = Object.create(context, { namespacePrefixes: { value: { ...prefixes, 'urn:x': 'x' } } }) as typeof context;
+// @ts-expect-error the context's table is read-only
+context.namespacePrefixes = {};
+// @ts-expect-error entries are read-only too
+context.namespacePrefixes['urn:x'] = 'x';
+// @ts-expect-error createDocument takes no arguments (the runtime ignores any passed)
+Jsonix.DOM.createDocument('', '');
+
 // (b) A generated interface is enough for the runtime's own QName / Calendar types.
 const runtimeCalendar: Jsonix.XML.Calendar | undefined = shipDate;
 const runtimeName: Jsonix.XML.QName = element.name;
@@ -102,5 +118,6 @@ marshaller.marshalString({ foo: 'bar' });
 export {
   name, zip, year, comment, typeName, itemParent, addressParent, rootParent, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
   untypedName, untypedValue, fromInterface, mixed, copiedPo, copiedAddress, asParented, runtimeCalendar, runtimeName,
+  serialized, fresh, domAvailable, xlinkFix, perDocument,
   out, doc, misspelt, wrongType, incomplete,
 };

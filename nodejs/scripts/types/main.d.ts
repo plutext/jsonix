@@ -53,6 +53,25 @@ export namespace Jsonix {
   }
 
   /**
+   * DOM access as the runtime does it: @xmldom/xmldom and xmlhttprequest when injected (Node),
+   * the browser's DOMParser / XMLSerializer / XMLHttpRequest otherwise (jsonix-CR-003 part 1).
+   */
+  export namespace DOM {
+    /** True when a DOM implementation (xmldom or the browser's) is available. */
+    function isDomImplementationAvailable(): boolean;
+    /** A new, empty XML document. Takes no arguments; the runtime ignores any that are passed. */
+    function createDocument(): Document;
+    /** Serialises a node to XML text; throws if no serializer is available. */
+    function serialize(node: Node): string;
+    /** Parses XML text into a document; throws on malformed input. */
+    function parse(text: string): Document;
+    /** Loads and parses the URL through the runtime's XMLHttpRequest transport (see Unmarshaller.unmarshalURL). */
+    function load(url: string, callback: (doc: Document) => void, options?: UnmarshalOptions): void;
+    /** Whether the xlink namespace work-around for older Chrome builds is needed in this environment. */
+    function isXlinkFixRequired(): boolean;
+  }
+
+  /**
    * An element: what an unmarshaller returns, what a marshaller accepts, and the value of an
    * elementRef property. Generated declarations alias this per global element, for example
    * `type PurchaseOrderElement = TypedNamedValue<PurchaseOrderType>`.
@@ -167,6 +186,13 @@ export namespace Jsonix {
      * @param options Optional configuration.
      */
     constructor(mappings: M[], options?: ContextOptions);
+
+    /**
+     * The namespace-to-prefix table this context marshals with, copied from
+     * `options.namespacePrefixes` at construction. Read-only: derive a per-document table rather
+     * than mutating the shared context.
+     */
+    readonly namespacePrefixes: { readonly [namespaceURI: string]: string };
 
     createUnmarshaller(): Unmarshaller<RootElementOf<M>>;
     createMarshaller(): Marshaller;

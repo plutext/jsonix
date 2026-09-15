@@ -1,6 +1,6 @@
 # jsonix-CR-003: Namespace declarations on demand, per-marshal prefix tables, and `Jsonix.DOM` in the typings
 
-**Status:** Proposed 2026-09-10
+**Status:** Split 2026-09-15 at the request of `docx4j-generated-objects-ts`: part 1 (§3.3, `Jsonix.DOM` and `Context.namespacePrefixes` in the typings) implemented as 3.2.1; part 2 (§3.1 and §3.2, namespace declarations where first used, `declareNamespaces` and per-marshal `namespacePrefixes`) **deferred, not dropped**, for 3.3.0 (see §7)
 **Depends on:** jsonix-CR-001 (typings, ES-module entry point); 3.2.0 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts` CR-001 (the facade's namespace prefix
 table), whose interim work-arounds this CR retires, and `plutext/docx4j-core-ts` CR-001 (the
@@ -139,3 +139,44 @@ facade reads today through a cast.
   names this CR as the proper fix.
 - `@docx4j/core-ts` (engine): drops its `Jsonix.DOM` cast in `src/xml/dom.mts`; otherwise
   unaffected, since it marshals through the facade.
+
+## 7. Split and implementation notes (2026-09-15)
+
+The `docx4j-generated-objects-ts` agent asked for the CR to be released in two parts, because
+everything it targets already works through the facade's work-arounds and none of it is blocking:
+
+- The facade derives a per-root prefix table with `Object.create(context, { namespacePrefixes })`
+  and strips unused declarations in a 37-line whole-tree walk (112 declarations with docx4j's
+  table, 1 after stripping). Output is correct.
+- Measured cost of the work-around over `context.createMarshaller().marshalString` on a generated
+  `w:document`: no measurable difference at 2,000 paragraphs; 530 ms against 415 ms at 20,000
+  paragraphs (2.7 MB), a figure that also includes DOM serialisation.
+- Part 2 would save about 45 facade lines and a modest speed-up on very large documents, at the
+  cost of changed output for every consumer that passes `namespacePrefixes` and a rework of the
+  facade's marshal path.
+
+**Part 1, implemented in 3.2.1 (typings only, no runtime change, marshalled output byte-identical):**
+
+- `Jsonix.DOM` declared from the source (`jsonix.js` lines 182 to 283):
+  `isDomImplementationAvailable(): boolean`, `createDocument(): Document`,
+  `serialize(node: Node): string`, `parse(text: string): Document` (throws on malformed input),
+  `load(url: string, callback: (doc: Document) => void, options?: UnmarshalOptions): void`,
+  `isXlinkFixRequired(): boolean`. `createDocument` takes **no** parameters in the source (the
+  xmldom and browser branches call their own `createDocument` with fixed arguments), so the
+  declaration has none and `createDocument('', '')` is a compile error; the runtime silently ignored
+  those arguments before. The internal `xlinkFixRequired` cache field is not declared.
+- `Context.namespacePrefixes: { readonly [namespaceURI: string]: string }`, read-only at both
+  levels, copied from `options.namespacePrefixes` at construction (`jsonix.js` lines 5819 to 5830).
+  `prefixNamespaces` (the inverse table) is not declared; add it if a consumer needs it.
+- `tests/typescript/usage.ts` gains checks for all six `DOM` functions, reading
+  `context.namespacePrefixes`, deriving a per-document table with `Object.create`, and
+  `@ts-expect-error` on assigning to the table, on assigning an entry, and on
+  `createDocument('', '')`.
+
+**Part 2, deferred.** The evidence in §2 and the design in §3.1 and §3.2 stay valid. Revisit when
+marshal time matters (for example `@docx4j/core-ts` CR-001 phase B re-marshalling large parts) or
+when another runtime consumer hits the 112-declaration root. Release as 3.3.0 when it comes.
+
+**Follow-ups on the consumer side after 3.2.1 is published:** `@docx4j/generated-objects-ts` raises
+its dependency to `^3.2.1` and removes its two casts (0.1.2); `@docx4j/core-ts` removes its
+`JsonixDom` cast and raises its range to that objects release.

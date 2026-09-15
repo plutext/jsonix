@@ -1,6 +1,6 @@
 {
 	"name": "@docx4j/jsonix",
-	"version": "3.2.0",
+	"version": "3.2.1",
 	"description": "Jsonix (JSON interfaces for XML) is a JavaScript library which allows converting between XML and JSON structures.",
 	"keywords": [
 		"json",
