@@ -1,6 +1,8 @@
-// ES-module entry point (package.json "exports" -> "import").
-// The runtime stays a single CommonJS bundle (jsonix.js); this wrapper gives ESM consumers and
-// bundlers a static named export, which the UMD footer of jsonix.js cannot provide.
-import cjs from './jsonix.js';
-export const Jsonix = cjs.Jsonix;
-export default cjs;
+// ES-module entry for browsers and browser bundlers (package.json "exports" -> "default" -> "import").
+// No Node dependency is reachable from this file: the browser supplies DOMParser, XMLSerializer and
+// XMLHttpRequest. Node and Node bundlers take jsonix.node.mjs through the "node" condition instead.
+// (jsonix-CR-005 section 7.1)
+import factory from './jsonix-factory.js';
+const { Jsonix } = factory();
+export { Jsonix };
+export default { Jsonix };

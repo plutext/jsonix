@@ -1,6 +1,6 @@
 # jsonix-CR-005: A bundled runtime loses `@xmldom/xmldom` and reaches for browser globals
 
-**Status:** Proposed 2026-09-25; reviewed by the runtime side 2026-09-24 (section 7): accepted, with the ESM entry split by `exports` condition
+**Status:** Implemented 2026-09-24, version 3.3.0 (together with jsonix-CR-004), as reviewed in section 7; see section 8
 **Depends on:** nothing; 3.2.1 is the baseline (3.2.2 unchanged in this area)
 **Requested by:** `plutext/docx4j-generated-objects-ts` CR-005 section 6.2, whose bundle test had to
 supply `globalThis.DOMParser` to make an esbuild bundle work; the first consumer that will meet it
@@ -191,3 +191,64 @@ not contain the string `@xmldom/xmldom` (guards 7.1).
 **Versioning:** this changes the package's entry files, so 3.3.0 rather than a patch; jsonix-CR-004
 (a parser fix) can ship in the same release. jsonix-CR-003 part 2 is not tied to the number 3.3.0
 and moves to whatever minor follows it.
+
+## 8. Implementation notes (2026-09-24)
+
+Implemented as section 7, with findings from the bundle tests that changed two details.
+
+**Files.** `nodejs/scripts/jsonix-factory.js` is the library (header + body, CRLF, ends in
+`module.exports = _jsonix_factory;`). `nodejs/scripts/jsonix.js` is a 40-line CommonJS/UMD wrapper:
+it requires the factory and runs the footer, which for Node (`typeof window === 'undefined'`)
+resolves `@xmldom/xmldom`, `xmlhttprequest` and `fs` with literal `require()` calls, each in its own
+`try`, warns on `console.warn` when xmldom is missing, and calls the factory with what it found. The
+same footer text is in the modular `Jsonix.footer.fragmentjs`. `amdefine` is no longer used and is
+removed from `dependencies`. `jsonix.mjs` imports the factory and calls it with no dependencies.
+`jsonix.node.mjs` imports `@xmldom/xmldom` and `node:fs` statically.
+
+**`exports`:** `"."` → `types`, then `node: { import: jsonix.node.mjs, require: jsonix.js }`, then
+`default: { import: jsonix.mjs, require: jsonix.js }`; subpaths `./jsonix.js`, `./jsonix-factory.js`,
+`./package.json`.
+
+**Finding 1: `xmlhttprequest` cannot be a static import in the Node ESM entry.** It is a CommonJS
+package that requires `url`, `http`, `https` and `child_process` at load time; esbuild cannot carry
+those into ESM output and the bundle throws `Dynamic require of "url" is not supported` at load.
+(In 3.2.x the footer's `try` swallowed exactly this failure, which is one reason the symptom was so
+far from the cause.) It is needed only by `unmarshalURL` and `Jsonix.DOM.load`, so
+`jsonix.node.mjs` passes the factory an object whose `XMLHttpRequest` getter resolves the package
+lazily with a real `require` from `createRequire`, which bundlers leave alone. In a bundle run from a
+directory without `node_modules`, only `unmarshalURL` fails, with a message naming the package.
+Verified unbundled: `unmarshalURL` against a local HTTP server works through the getter.
+
+**Finding 2: bundlers choose the `import`/`require` condition by the consumer's syntax, not the output
+format.** An `import` consumer bundled to CommonJS still receives `jsonix.node.mjs`, where esbuild
+sets `import.meta` to `{}`, so `createRequire(import.meta.url)` threw. The entry falls back to
+`createRequire(process.cwd() + '/')` in that case. Consequently the footer's literal-require path
+(section 7.3) is reached only by a `require()` consumer, and the bundle test has both kinds.
+
+**`Jsonix.DOM.use(implementation)`** (section 7.5): `Jsonix.DOM.implementation`, `use`, and
+`getImplementation()` (supplied, else injected xmldom, else `null`); `parse`, `serialize`,
+`createDocument` and `isDomImplementationAvailable` consult `getImplementation()` first. Typings:
+`Jsonix.DomImplementation` interface, `DOM.use`, `DOM.getImplementation`.
+
+**Bundle test** (`npm run test:bundle`, esbuild `~0.28.2` as a dev dependency, in CI): a consumer
+resolving `@docx4j/jsonix` through a `node_modules` symlink (an esbuild alias to a directory would
+bypass `exports`) is bundled four ways and each Node bundle is run from an otherwise empty
+directory, parsing a NEL through the runtime and marshalling it back:
+
+| Case | Entry reached | Result |
+|------|---------------|--------|
+| node, esm, `import` consumer | `jsonix.node.mjs` | ok |
+| node, cjs, `import` consumer | `jsonix.node.mjs` (import.meta fallback) | ok |
+| node, cjs, `require()` consumer | `jsonix.js` footer, literal requires | ok |
+| browser, esm | `jsonix.mjs`; must not contain `@xmldom/xmldom`, `node_modules/xmlhttprequest`, `node:fs`, `jsonix.node.mjs`, `createRequire`; throws in Node until `Jsonix.DOM.use(xmldom)`, then works | ok |
+
+Because of the last row, the literal `@xmldom/xmldom` must stay out of `jsonix-factory.js`, comments
+included (`CLAUDE.md` records this).
+
+**Other checks:** `tests/dom.js` 28 assertions; `tests/typescript` 98; existing suites 1265;
+`npm run typecheck` (bundler and node16) green; `npm run test:esm` green (it now takes the `node`
+condition); `npm pack` ships `jsonix.js`, `jsonix-factory.js`, `jsonix.mjs`, `jsonix.node.mjs`,
+`types/`, `LICENSE`; `amdefine` absent from the lock file.
+
+**Consumer follow-up:** `docx4j-generated-objects-ts` deletes the `globalThis.DOMParser` /
+`XMLSerializer` lines from `test/bundle.mjs` and adds a `cjs`-format bundle as a second witness.

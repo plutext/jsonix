@@ -21,9 +21,10 @@ npx nodeunit tests/xsd.js               # one suite file
 npx nodeunit -t Integer tests/xsd.js    # one named test inside a file
 npm run typecheck                       # tsc over tests/typescript (bundler and node16 resolution)
 npm run test:esm                        # Node ESM import of the package + an .mjs mapping
+npm run test:bundle                     # esbuild bundles (node esm, node cjs, browser esm) run from an empty directory
 ```
 
-CI runs all three (`.github/workflows/run-tests.yml`).
+CI runs all four (`.github/workflows/run-tests.yml`).
 
 - The `Request` suite (`tests/request.js`) starts a `node-static` server on port 8080. If 8080 is in use the full
   run reports an "undone" failure (`EADDRINUSE`); this is environmental, not a code regression.
@@ -40,7 +41,7 @@ The runtime exists as three checked-in copies that have **diverged** and are pat
 
 | Path | Role |
 |---|---|
-| `nodejs/scripts/jsonix.js` | The npm-published bundle (`main`). What the tests load. **Edit this one first.** CRLF line endings, as is `dist/Jsonix-all.js`; the modular sources are LF. |
+| `nodejs/scripts/jsonix-factory.js` | The npm-published library: header + body as `var _jsonix_factory = function (xmldom, xmlhttprequest, fs) {...}; module.exports = _jsonix_factory;`. What the tests load (through `jsonix.js`). **Edit this one first.** CRLF line endings, as is `dist/Jsonix-all.js`; the modular sources are LF. `nodejs/scripts/jsonix.js` is a 40-line CommonJS/UMD wrapper that requires the factory and resolves the dependencies (see "Entry points"). |
 | `scripts/src/main/javascript/org/hisrc/jsonix/` | Modular upstream sources, one class per file. Concatenated by Maven in the order listed in `scripts/src/main/resources/org/hisrc/jsonix/Jsonix.scripts` between `Jsonix.header.fragmentjs` / `Jsonix.footer.fragmentjs`. |
 | `dist/Jsonix-all.js`, `dist/Jsonix-min.js` | Browser/bower bundle. |
 
@@ -67,6 +68,7 @@ typings but hard-code the runtime's data representation. The contract, guarded b
 | `XmlQName` fields `namespaceURI`, `localPart`, `prefix`, `key`, `string` | `Jsonix.XML.QName` |
 | `XmlCalendar` fields `year` … `timezone`, unset = `NaN` | `Jsonix.XML.Calendar` (never a JS `Date`) |
 | `XmlDuration` fields `sign`, `years`, `months`, `days`, `hours`, `minutes`, `seconds` | `Jsonix.Schema.XSD.Duration` |
+| XML 1.0 text keeps raw U+0085 and U+2028 | `Jsonix.DOM.parse` passes xmldom a `normalizeLineEndings` for the document's XML version (jsonix-CR-004); xmldom's default applies the 1.1 rule to everything |
 | `readonly PARENT?: <union of containers>` on class interfaces only | set by `ClassInfo.unmarshal` from a result stack on the `Input` when `context.parentPointers` is on; non-enumerable; never on wrappers, maps, calendars, QNames, DOM nodes |
 
 Changing any of these in `jsonix.js` breaks every generated `.d.ts` in the wild. The reverse direction has one known
@@ -85,8 +87,18 @@ the public API changes; `tests/typescript/usage.ts` and `usage.node16.mts` must 
 original to copy; a copy's own `PARENT` is unset unless `parent` is given. `Jsonix.Util.setParent` is the one place
 that defines the property. These live in `Util` (bundles: before `Jsonix.Class`; modular: `Util.js`).
 
-Packaging: `package.json` has an `exports` map (`import` → `jsonix.mjs`, a thin ESM wrapper over the CommonJS bundle;
-`require` → `jsonix.js`; `./jsonix.js` kept as a subpath for deep imports). Keep `jsonix.mjs` out of `.npmignore`.
+## Entry points (jsonix-CR-005)
+
+`package.json` `exports` routes by condition: `node` + `import` → `jsonix.node.mjs` (static `import` of `@xmldom/xmldom`
+and `node:fs`; `xmlhttprequest` resolved lazily with `createRequire` because it requires Node built-ins at load time,
+which ESM bundles cannot carry); `default` + `import` → `jsonix.mjs` (no dependencies: the browser supplies the DOM;
+must never import a Node package); `require` → `jsonix.js` (UMD wrapper: literal `require()` of the three
+dependencies, each in its own `try`, so CommonJS bundles resolve them; warns on `console` when xmldom is missing outside
+a browser). `Jsonix.DOM.use(impl)` lets a consumer supply DOMParser/XMLSerializer/DOMImplementation, consulted before
+the injected xmldom and the globals. `npm run test:bundle` (esbuild) builds node-esm, node-cjs and browser-esm bundles of
+a consumer and runs them from an empty directory; the browser bundle must not contain the string `@xmldom/xmldom`, so
+keep that literal out of `jsonix-factory.js` (comments included). `amdefine` is gone. Keep `jsonix.mjs`,
+`jsonix.node.mjs` and `jsonix-factory.js` out of `.npmignore`.
 Proposals for this repository live in `docs/change-requests/`.
 
 ## Architecture of the runtime

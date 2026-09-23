@@ -36,3 +36,7 @@ jobs:
       - name: ES-module import smoke test
         working-directory: ./nodejs/scripts
         run: npm run test:esm
+
+      - name: Bundle tests (esbuild, node esm/cjs and browser esm)
+        working-directory: ./nodejs/scripts
+        run: npm run test:bundle

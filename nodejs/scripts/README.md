@@ -119,6 +119,11 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
   type usable as a discriminant. It is optional on input; you need not set it when marshalling.
 * The compiler can also write the mapping as an ES module (`<jsonix:output format="esm"/>` gives `PO.mjs`), and this
   package has an ES-module entry point, so `import { Jsonix } from '@docx4j/jsonix'` works in Node ESM and bundlers.
+* Node and Node bundlers get an entry with static imports of the DOM dependency (`jsonix.node.mjs`, selected by the
+  package's `exports` `node` condition), browsers an entry with none (`jsonix.mjs`); `require()` keeps the UMD. Where
+  the runtime cannot detect its environment (workers, sandboxes), `Jsonix.DOM.use({ DOMParser, XMLSerializer,
+  DOMImplementation })` supplies the DOM to use. In Node, XML 1.0 text keeps raw U+0085 and U+2028 (xmldom's default
+  would turn them into line feeds).
 * `new Jsonix.Context(mappings, { parentPointers: true })` gives every unmarshalled typed object a non-enumerable
   `PARENT` pointing at its containing typed object (root objects have none), and `Jsonix.Util.deepCopy(value, parent?)`
   copies a subtree and re-links the pointers, like docx4j's `-Xparent-pointer` / `-Xdocx4j-copy` model. Generated

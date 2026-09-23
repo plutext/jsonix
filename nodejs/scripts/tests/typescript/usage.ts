@@ -83,6 +83,15 @@ const serialized: string = Jsonix.DOM.serialize(parsed);
 const fresh: Document = Jsonix.DOM.createDocument();
 const domAvailable: boolean = Jsonix.DOM.isDomImplementationAvailable();
 const xlinkFix: boolean = Jsonix.DOM.isXlinkFixRequired();
+// jsonix-CR-004 / CR-005 (3.3.0)
+const normalized10: string = Jsonix.DOM.normalizeLineEndings10('a\r\nb');
+const normalized11: string = Jsonix.DOM.normalizeLineEndings11('a\u0085b');
+const is11: boolean = Jsonix.DOM.isXml11('<?xml version="1.1"?><a/>');
+const current: Jsonix.DomImplementation | null = Jsonix.DOM.getImplementation();
+Jsonix.DOM.use({ DOMParser, XMLSerializer });
+Jsonix.DOM.use(null);
+// @ts-expect-error not a DOM implementation
+Jsonix.DOM.use('xmldom');
 Jsonix.DOM.load('http://localhost/po.xml', (loaded: Document) => void loaded);
 const prefixes: { readonly [namespaceURI: string]: string } = context.namespacePrefixes;
 const perDocument = Object.create(context, { namespacePrefixes: { value: { ...prefixes, 'urn:x': 'x' } } }) as typeof context;
@@ -118,6 +127,6 @@ marshaller.marshalString({ foo: 'bar' });
 export {
   name, zip, year, comment, typeName, itemParent, addressParent, rootParent, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
   untypedName, untypedValue, fromInterface, mixed, copiedPo, copiedAddress, asParented, runtimeCalendar, runtimeName,
-  serialized, fresh, domAvailable, xlinkFix, perDocument,
+  serialized, fresh, domAvailable, xlinkFix, perDocument, normalized10, normalized11, is11, current,
   out, doc, misspelt, wrongType, incomplete,
 };

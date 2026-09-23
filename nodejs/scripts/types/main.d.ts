@@ -56,14 +56,43 @@ export namespace Jsonix {
    * DOM access as the runtime does it: @xmldom/xmldom and xmlhttprequest when injected (Node),
    * the browser's DOMParser / XMLSerializer / XMLHttpRequest otherwise (jsonix-CR-003 part 1).
    */
+  /**
+   * A DOM implementation a consumer can supply with `DOM.use`: any object exposing the W3C
+   * constructors, for example the `@xmldom/xmldom` module. Missing members fall through to the
+   * next option (injected xmldom, then browser globals).
+   */
+  export interface DomImplementation {
+    DOMParser?: new (options?: unknown) => { parseFromString(text: string, mimeType: string): Document };
+    XMLSerializer?: new () => { serializeToString(node: Node): string };
+    DOMImplementation?: new () => { createDocument(...args: unknown[]): Document };
+  }
+
   export namespace DOM {
-    /** True when a DOM implementation (xmldom or the browser's) is available. */
+    /**
+     * Supplies the DOM implementation to use, consulted before the xmldom injected into the
+     * runtime and before browser globals; `null` clears it (jsonix-CR-005). For workers, sandboxes
+     * and bundles the runtime cannot detect.
+     */
+    function use(implementation: DomImplementation | null): void;
+    /** The implementation in effect: the one given to `use`, else the injected xmldom, else `null` (browser globals will be tried). */
+    function getImplementation(): DomImplementation | null;
+    /** XML 1.0 section 2.11 line-ending normalisation: CR LF and bare CR become LF (jsonix-CR-004). */
+    function normalizeLineEndings10(text: string): string;
+    /** XML 1.1 section 2.11: additionally CR NEL, NEL (U+0085) and LINE SEPARATOR (U+2028) become LF. */
+    function normalizeLineEndings11(text: string): string;
+    /** True when the text starts with an XML declaration whose version is 1.1. `parse` uses it to pick the normalisation. */
+    function isXml11(text: string): boolean;
+    /** True when a DOM implementation (supplied, injected xmldom, or the browser's) is available. */
     function isDomImplementationAvailable(): boolean;
     /** A new, empty XML document. Takes no arguments; the runtime ignores any that are passed. */
     function createDocument(): Document;
     /** Serialises a node to XML text; throws if no serializer is available. */
     function serialize(node: Node): string;
-    /** Parses XML text into a document; throws on malformed input. */
+    /**
+     * Parses XML text into a document; throws on malformed input. Line endings are normalised per the
+     * document's XML version (1.0 unless the declaration says 1.1), so raw U+0085 and U+2028 survive in
+     * XML 1.0 text (jsonix-CR-004).
+     */
     function parse(text: string): Document;
     /** Loads and parses the URL through the runtime's XMLHttpRequest transport (see Unmarshaller.unmarshalURL). */
     function load(url: string, callback: (doc: Document) => void, options?: UnmarshalOptions): void;

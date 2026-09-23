@@ -7,6 +7,7 @@ module.exports =
 	"Jsonix": {
 		"Util" : require('./util'),
 		"XML" : require('./xml'),
+		"DOM" : require('./dom'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

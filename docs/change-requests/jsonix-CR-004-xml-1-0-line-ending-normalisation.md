@@ -1,6 +1,6 @@
 # jsonix-CR-004: Parse XML 1.0 documents with XML 1.0 line-ending normalisation (U+0085 and U+2028 must survive)
 
-**Status:** Proposed 2026-09-19
+**Status:** Implemented 2026-09-24, version 3.3.0 (together with jsonix-CR-005)
 **Depends on:** nothing; 3.2.2 is the baseline
 **Requested by:** `plutext/docx4j-core-ts` CR-001 section 9 (found by its Phase B step 4 parity
 comparison against docx4j, where Xerces keeps both characters; the `tracked-changes.docx` fixture
@@ -130,3 +130,27 @@ parse('<?xml version="1.0"?><a>x&#x85;y</a>')                                // 
 ## 6. Effort
 
 An hour, including the three copies, the typings and the tests.
+
+## 7. Implementation notes (2026-09-24)
+
+Implemented as proposed in section 3, in all three copies (`nodejs/scripts/jsonix-factory.js`, which
+now holds the library body, `dist/Jsonix-all.js`, and the modular `Jsonix/DOM.js`), with two
+adjustments:
+
+- The version check is `Jsonix.DOM.isXml11(text)`: `^[\s\uFEFF]*<\?xml\s[^>]*?version\s*=\s*(["'])1\.1\1`,
+  tolerant of a BOM or whitespace before the declaration. xmldom itself rejects a BOM before the
+  declaration ("processing instruction ... is only at the start of the document"), so the tolerance
+  matters only for the helper, not for parsing; the test covers the helper.
+- The parser is obtained through `Jsonix.DOM.getImplementation()` (jsonix-CR-005 section 7.5), so
+  the normalisation option is passed to a consumer-supplied `DOMParser` as well; a browser
+  `DOMParser` ignores the argument.
+
+Tests: `tests/dom.js` (new nodeunit suite, registered in `tests/tests.js`): the three lines of the
+report, PARAGRAPH SEPARATOR kept in both versions, no declaration treated as 1.0, CR and CR LF
+normalised in 1.0, NEL, LINE SEPARATOR and CR NEL normalised in 1.1, the helpers, and a round trip
+of NEL and LINE SEPARATOR through `unmarshalString` and `marshalString`. The bundle test
+(jsonix-CR-005) parses a NEL through every bundled entry as well. Typings: `normalizeLineEndings10`,
+`normalizeLineEndings11`, `isXml11` declared on `Jsonix.DOM`.
+
+Not done: the upstream report to xmldom (section 3.3); a courtesy for the maintainer, not needed by
+this runtime.

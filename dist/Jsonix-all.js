@@ -181,8 +181,36 @@ Jsonix.XML = {
 
 
 Jsonix.DOM = {
+	// A DOM implementation supplied by the consumer (jsonix-CR-005 section 7.5): an object with DOMParser,
+	// XMLSerializer and/or DOMImplementation constructors, such as the xmldom module. Consulted before
+	// the xmldom injected into the factory and before the browser globals.
+	implementation: null,
+	use: function (implementation) {
+		Jsonix.DOM.implementation = implementation || null;
+	},
+	getImplementation: function () {
+		if (Jsonix.DOM.implementation) {
+			return Jsonix.DOM.implementation;
+		}
+		if (typeof _jsonix_xmldom !== 'undefined' && _jsonix_xmldom) {
+			return _jsonix_xmldom;
+		}
+		return null;
+	},
+	// Line-ending normalisation before parsing (jsonix-CR-004). XML 1.0 section 2.11: CR LF and bare CR become LF.
+	normalizeLineEndings10: function (text) {
+		return text.replace(/\r\n?/g, '\n');
+	},
+	// XML 1.1 section 2.11: additionally CR NEL, NEL (U+0085) and LINE SEPARATOR (U+2028) become LF.
+	normalizeLineEndings11: function (text) {
+		return text.replace(/\r[\n\u0085]/g, '\n').replace(/[\r\u0085\u2028]/g, '\n');
+	},
+	// True when the text starts with an XML declaration whose version is 1.1 (a BOM or whitespace may precede it).
+	isXml11: function (text) {
+		return typeof text === 'string' && /^[\s\uFEFF]*<\?xml\s[^>]*?version\s*=\s*(["'])1\.1\1/.test(text);
+	},
 	isDomImplementationAvailable : function () {
-		if (typeof _jsonix_xmldom !== 'undefined')
+		if (Jsonix.DOM.getImplementation() !== null)
 		{
 			return true;
 		} else if (typeof document !== 'undefined' && Jsonix.Util.Type.exists(document.implementation) && Jsonix.Util.Type.isFunction(document.implementation.createDocument)) {
@@ -194,9 +222,9 @@ Jsonix.DOM = {
 	createDocument : function() {
 		// REWORK
 		// Node.js
-		if (typeof _jsonix_xmldom !== 'undefined')
+		if (Jsonix.DOM.getImplementation() !== null)
 		{
-			return new (_jsonix_xmldom.DOMImplementation)().createDocument();
+			return new (Jsonix.DOM.getImplementation().DOMImplementation)().createDocument();
 		} else if (typeof document !== 'undefined' && Jsonix.Util.Type.exists(document.implementation) && Jsonix.Util.Type.isFunction(document.implementation.createDocument)) {
 			return document.implementation.createDocument('', '', null);
 		} else if (typeof ActiveXObject !== 'undefined') {
@@ -209,9 +237,9 @@ Jsonix.DOM = {
 		Jsonix.Util.Ensure.ensureExists(node);
 		// REWORK
 		// Node.js
-		if (typeof _jsonix_xmldom !== 'undefined')
+		if (Jsonix.DOM.getImplementation() !== null)
 		{
-			return (new (_jsonix_xmldom).XMLSerializer()).serializeToString(node);
+			return (new (Jsonix.DOM.getImplementation().XMLSerializer)()).serializeToString(node);
 		} else if (Jsonix.Util.Type.exists(XMLSerializer)) {
 			return (new XMLSerializer()).serializeToString(node);
 		} else if (Jsonix.Util.Type.exists(node.xml)) {
@@ -222,9 +250,10 @@ Jsonix.DOM = {
 	},
 	parse : function(text) {
 		Jsonix.Util.Ensure.ensureExists(text);
-		if (typeof _jsonix_xmldom !== 'undefined')
+		if (Jsonix.DOM.getImplementation() !== null)
 		{
-			return (new (_jsonix_xmldom).DOMParser()).parseFromString(text, 'application/xml');
+			var normalizeLineEndings = Jsonix.DOM.isXml11(text) ? Jsonix.DOM.normalizeLineEndings11 : Jsonix.DOM.normalizeLineEndings10;
+			return (new (Jsonix.DOM.getImplementation().DOMParser)({ normalizeLineEndings: normalizeLineEndings })).parseFromString(text, 'application/xml');
 		} else if (typeof DOMParser != 'undefined') {
 			return (new DOMParser()).parseFromString(text, 'application/xml');
 		} else if (typeof ActiveXObject != 'undefined') {
