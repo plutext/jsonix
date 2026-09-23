@@ -1,6 +1,6 @@
 # jsonix-CR-005: A bundled runtime loses `@xmldom/xmldom` and reaches for browser globals
 
-**Status:** Proposed 2026-09-25
+**Status:** Proposed 2026-09-25; reviewed by the runtime side 2026-09-24 (section 7): accepted, with the ESM entry split by `exports` condition
 **Depends on:** nothing; 3.2.1 is the baseline (3.2.2 unchanged in this area)
 **Requested by:** `plutext/docx4j-generated-objects-ts` CR-005 section 6.2, whose bundle test had to
 supply `globalThis.DOMParser` to make an esbuild bundle work; the first consumer that will meet it
@@ -135,3 +135,59 @@ dependency it could not inject, so the next person meets the cause rather than
 
 Not about how the mappings are loaded: that was the objects package's own defect and is fixed there
 (its CR-005, a registry of literal imports). This is only about how the runtime gets its DOM.
+
+## 7. Runtime review (2026-09-24)
+
+Accepted: the diagnosis is right, the footer's silent `catch` is the cause, and the fix belongs in
+this repository. Three refinements to the proposal before implementation.
+
+**7.1 Proposal A must not put `@xmldom/xmldom` into browser bundles.** `jsonix.mjs` is the single
+ESM entry today, and it is what Vite resolves for `docx4j-ts-editor` and what an Office JS add-in
+bundle resolves. A static `import * as xmldom from '@xmldom/xmldom'` there would pull xmldom into
+every browser bundle and, worse, make the browser use xmldom instead of its native `DOMParser` and
+`XMLSerializer` (slower, and different serialisation details). So the ESM entry has to fork on the
+package.json `exports` condition, which every bundler and Node itself honour:
+
+```json
+".": {
+  "types": "./types/main.d.ts",
+  "node":    { "import": "./jsonix.node.mjs", "require": "./jsonix.js" },
+  "default": { "import": "./jsonix.mjs",      "require": "./jsonix.js" }
+}
+```
+
+- `jsonix.node.mjs`: static imports of `@xmldom/xmldom`, `xmlhttprequest` and `node:fs`, then
+  `factory(xmldom, xmlhttprequest, fs)`. esbuild with `--platform=node`, and Node, take this.
+- `jsonix.mjs`: `factory()` with no dependencies, for browsers and browser bundlers (`default`,
+  and `browser` if a bundler asks for it). No Node dependency is reachable from this file.
+
+**7.2 The factory needs its own file.** Both ESM entries call the factory, so it must be importable
+without running the UMD footer. `jsonix.js` is generated as header + body + footer; split it into
+`jsonix-factory.js` (CommonJS, `module.exports = _jsonix_factory`, the body) and a short `jsonix.js`
+that requires it and keeps today's UMD footer for `require()` consumers. The modular sources
+already have the header and footer as separate fragments, so this is a change to how the bundle
+is assembled, not to the library. `dist/Jsonix-all.js` (browser globals) is unaffected.
+
+**7.3 Proposal B is the right fallback for the CommonJS footer, but only there.** A CommonJS
+*bundle* (`--format=cjs`) still runs the footer, so the `catch` should try literal
+`require('@xmldom/xmldom')`, `require('xmlhttprequest')` and `require('fs')`, each in its own
+`try`, and pass what it gets to the factory. Literal specifiers are what a Node bundler resolves.
+They must stay out of the ESM files (7.1), otherwise a browser bundler resolving a `require()`
+condition would try to bundle `fs`; that residual case (CommonJS consumer code in a browser
+bundle) is documented as needing those three marked external, as it already does today.
+
+**7.4 Warn only where it is a defect.** The fallback to browser globals is the correct path in a
+browser bundle, so the warning must fire only when `typeof window === 'undefined'` and xmldom could
+not be obtained, naming `@xmldom/xmldom`. Use `console.warn` guarded by `typeof console`.
+
+**7.5 Proposal C is worth having** as `Jsonix.DOM.use({ DOMParser, XMLSerializer, DOMImplementation })`,
+consulted before the injected xmldom and before the globals, for workers and sandboxes. It also
+gives the bundle test a way to assert the injection without touching globals.
+
+**Tests:** as section 4, with esbuild pinned as a dev dependency and run for `--platform=node` in
+both `esm` and `cjs` formats, and additionally a `--platform=browser --format=esm` bundle that must
+not contain the string `@xmldom/xmldom` (guards 7.1).
+
+**Versioning:** this changes the package's entry files, so 3.3.0 rather than a patch; jsonix-CR-004
+(a parser fix) can ship in the same release. jsonix-CR-003 part 2 is not tied to the number 3.3.0
+and moves to whatever minor follows it.
