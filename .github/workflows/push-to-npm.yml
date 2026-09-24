@@ -26,7 +26,26 @@ jobs:
       - name: Install Project Dependencies
         working-directory: ./nodejs/scripts
         run: npm ci
-      
+
+      - name: Refuse unless the release tag names package.json's version
+        working-directory: ./nodejs/scripts
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "${TAG#v}" != "$VERSION" ]; then
+            echo "release tag $TAG does not match package.json version $VERSION" >&2
+            exit 1
+          fi
+
+      # Publishing a tarball skips prepublishOnly, so the checks are explicit.
+      - name: Type-check and test
+        working-directory: ./nodejs/scripts
+        run: npm run typecheck && npm test && npm run test:esm && npm run test:bundle
+
+      - name: Refuse if the checks left the working tree dirty
+        run: git diff --quiet || { git status --short; exit 1; }
+
       - name: Remove Tests and Demos
         working-directory: ./nodejs/scripts
         run: |

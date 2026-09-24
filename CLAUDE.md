@@ -29,8 +29,9 @@ CI runs all four (`.github/workflows/run-tests.yml`).
 - The `Request` suite (`tests/request.js`) starts a `node-static` server on port 8080. If 8080 is in use the full
   run reports an "undone" failure (`EADDRINUSE`); this is environmental, not a code regression.
 - nodeunit tests must call `test.done()`; a missing call shows up as an "Undone tests" failure.
-- Release: bump `version` in `nodejs/scripts/package.json`, then publish a GitHub release. The
-  `.github/workflows` publish job strips `tests/`, runs `npm pack`, and publishes via npm trusted publishing.
+- Release: follow `RELEASING.md` (version in `nodejs/scripts/package.json`, checks, tarball inspection, annotated bare-version
+  tag pushed *before* the GitHub release, release created from that tag). The publish workflow refuses unless the tag equals
+  the package version, re-runs the checks, strips `tests/`, packs, and publishes via npm trusted publishing.
 
 The Maven build (`pom.xml`, `*.bat`) is the original upstream pipeline (Java 8, legato/yuicompressor/JsTestDriver
 plugins). CI does not use it and it is not expected to work; don't reach for it to rebuild bundles.
