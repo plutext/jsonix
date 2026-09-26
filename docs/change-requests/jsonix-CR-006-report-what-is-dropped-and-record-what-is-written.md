@@ -299,3 +299,14 @@ and the located message originally spelled a namespaced attribute as
 `@{http://...}val`; it now resolves the prefix on the element, `w:sz/@w:val`, falling back to the
 QName's own prefix and then the local name. core-ts recorded the corrected `xsi:type` claim in its
 CR-002 section 27.
+
+**Limitation found at release time, not changed in 3.4.0 (candidate for a follow-up CR):** a class
+with **no element properties** (attributes only, or attributes plus a simple value) does not reach
+the skip of section 3.1 when it meets an unexpected child. `ClassInfo.unmarshal` takes its "just
+skip everything" branch (`input.nextTag()` then the END_ELEMENT assertion), and an unexpected child
+there throws `Illegal state: must be END_ELEMENT.` with no location. So `onUnexpectedElement` never
+fires for such a class and the unmarshal aborts instead. Reproduced identically on the published
+3.3.0, so it is pre-existing, and the tag was not moved for it after core-ts's verification. The
+fix is small and lax in the direction the runtime already claims: skip and report every child of an
+element-less class rather than assert, or at least locate the error through `locateError`; it
+changes an error path into a lax one, so it is proposed separately rather than folded in here.
