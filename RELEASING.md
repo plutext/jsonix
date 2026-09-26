@@ -44,6 +44,21 @@ the one core-ts uses (its `RELEASING.md`), adapted to this repository.
    refuses unless the tag equals `package.json`'s version, runs the checks again, packs, and
    publishes.
 
+## Consumer verification, and moving a tag afterwards
+
+The dependent packages (`docx4j-generated-objects-ts`, `docx4j-core-ts`) test a release candidate
+against the **checkout**, not a tarball, before it is released: `npm install --no-save
+../jsonix/nodejs/scripts`, their full suites, one check aimed at the specific claim the change
+makes (for a marshal-path change, byte-identity of every re-marshalled part under old and new), the
+real consumer case on real data, then `npm ci` to restore. Tell them when there is a commit to test
+and wait for their report; their pattern is written up in core-ts's `RELEASING.md`.
+
+If anything is then amended and the tag moved (even a one-line message change), **tell the
+consumers which commit the tag now names and what changed**, and let them re-verify. The publish
+workflow's guard catches a tag that does not match `package.json`; it cannot catch a tag that no
+longer matches what somebody tested. Their trial against the checkout is also not evidence about
+the published tarball, so they run their suites again against the npm artifact when they bump.
+
 ## After publishing
 
 - `npm view @docx4j/jsonix version dist-tags dependencies license`: `latest` moved, the dependency
