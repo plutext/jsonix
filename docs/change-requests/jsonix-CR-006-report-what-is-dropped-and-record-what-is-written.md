@@ -300,22 +300,32 @@ and the located message originally spelled a namespaced attribute as
 QName's own prefix and then the local name. core-ts recorded the corrected `xsi:type` claim in its
 CR-002 section 27.
 
-**Limitation found at release time, not changed in 3.4.0 (candidate for a follow-up CR):** a class
-with **no element properties** (attributes only, or attributes plus a simple value) does not reach
-the skip of section 3.1 when it meets an unexpected child. `ClassInfo.unmarshal` takes its "just
-skip everything" branch (`input.nextTag()` then the END_ELEMENT assertion), and an unexpected child
-there throws `Illegal state: must be END_ELEMENT.` with no location. So `onUnexpectedElement` never
-fires for such a class and the unmarshal aborts instead. Reproduced identically on the published
-3.3.0, so it is pre-existing, and the tag was not moved for it after core-ts's verification. The
-fix is small and lax in the direction the runtime already claims: skip and report every child of an
-element-less class rather than assert, or at least locate the error through `locateError`; it
-changes an error path into a lax one, so it is proposed separately rather than folded in here.
+**Limitation found at release time, corrected by core-ts's measurement (2026-09-27):** a class with
+**no element properties** (attributes only, or attributes plus a simple value) does not reach the skip
+of section 3.1 when it meets an unexpected child. `ClassInfo.unmarshal` takes its "just skip
+everything" branch (`input.nextTag()` then the END_ELEMENT assertion) and throws
+`Illegal state: must be END_ELEMENT.`, so `onUnexpectedElement` does not fire and the unmarshal
+aborts. But the throw is **located** in every realistic case: the class sits inside a parent, the
+parent's `unmarshalProperty` catches it and `locateError` names the offending element and line,
+`w:bogus (line 1): Illegal state: must be END_ELEMENT.` (core-ts, `<w:bogus/>` inside `w:sz`). Only
+an element-less class at the document root, which nothing encloses, throws the bare message; that was
+the shape of the release-time probe. The behaviour is unchanged from 3.3.0 apart from the location.
+Consequence for a validating consumer: collect the callbacks and translate a located throw into the
+same problem shape (core-ts CR-002 section 27 now says so); no further hook is needed. A follow-up
+could make the element-less branch skip and report children like the elements loop does; it is a
+lax-ification of an error path, so it is proposed separately, not folded in here.
 
-**Reading note from objects-ts (2026-09-27), queued for the next release:** the unexpected-attribute
+**Reading note from objects-ts (2026-09-27), settled as tidy-up only:** the unexpected-attribute
 report is inside the pre-existing `if (exists(this.structure.attributes))` guard. `structure.attributes`
 is always initialised to `{}` when the structure is built, so the guard never bites today, but the
 report now depends on an initialisation that was previously only deciding whether there was anything
-to read. Hoist the report out of the guard (or assert the field) so the firing is structural, and say
-in a comment that the initialisation is load-bearing. Not changed in 3.4.0: the tag was verified and
-the behaviour is correct as shipped. The precise firing conditions are now relied on by objects-ts's
+to read. core-ts then read the build path: `attributes: {}` is set unconditionally when the structure is
+built and `buildStructure` goes through `ensureObject`, so the guard is redundant rather than
+load-bearing and the silent-unreporting failure mode cannot occur. Hoisting is a tidy-up, not a
+correctness item; not changed in 3.4.0. The precise firing conditions are now relied on by objects-ts's
 fidelity test and core-ts's `validateXml` (recorded in `CLAUDE.md`'s contract table).
+
+**First use (core-ts, 2026-09-27):** with the two callbacks over 467 parts of 51 fixtures core-ts took
+an inventory of everything its package silently drops and found two losses nobody knew of, one a
+docx4j schema gap (`w:stylePaneFormatFilter` typed `CT_ShortHexNumber` in `wml.xsd`, so Word's fifteen
+booleans on it are lost). Neither was findable by diffing. core-ts CR-001 section 21.1 has the list.
