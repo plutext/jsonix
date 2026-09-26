@@ -2430,6 +2430,14 @@ Jsonix.Model.ClassInfo = Jsonix
 						for ( var index = 0; index < attributeCount; index++) {
 							var attributeNameKey = input
 									.getAttributeNameKey(index);
+							// jsonix-CR-006: an attribute the class info does not expect is dropped unless an anyAttribute wildcard keeps it.
+							// Namespace declarations and (with supportXsiType) xsi:type are not dropped content and are not reported.
+							if (context.onUnexpectedAttribute && !Jsonix.Util.Type.exists(this.structure.attributes[attributeNameKey]) && !Jsonix.Util.Type.exists(this.structure.anyAttribute)) {
+								var unexpectedAttributeName = input.getAttributeName(index);
+								if (unexpectedAttributeName.namespaceURI !== Jsonix.XML.XMLNS_NS && !(context.supportXsiType && unexpectedAttributeName.namespaceURI === Jsonix.Schema.XSI.NAMESPACE_URI && unexpectedAttributeName.localPart === Jsonix.Schema.XSI.TYPE)) {
+									context.onUnexpectedAttribute(unexpectedAttributeName, input.node, this);
+								}
+							}
 							if (Jsonix.Util.Type
 									.exists(this.structure.attributes[attributeNameKey])) {
 								var attributeValue = input
@@ -2472,7 +2480,10 @@ Jsonix.Model.ClassInfo = Jsonix
 								this.unmarshalProperty(context, input,
 										anyPropertyInfo, result);
 							} else {
-								// TODO optionally report a validation error that the element is not expected
+								// jsonix-CR-006: the element is dropped (a class with an any wildcard never reaches this branch); report it if asked.
+								if (context.onUnexpectedElement) {
+									context.onUnexpectedElement(input.getName(), input.node, this);
+								}
 								et = input.skipElement();
 							}
 						} else if ((et === Jsonix.XML.Input.CHARACTERS || et === Jsonix.XML.Input.CDATA || et === Jsonix.XML.Input.ENTITY_REFERENCE)) {
@@ -2506,19 +2517,33 @@ Jsonix.Model.ClassInfo = Jsonix
 				}
 				return result;
 			},
-			unmarshalProperty : function(context, input, propertyInfo, result) {
-				var propertyValue = propertyInfo
-						.unmarshal(context, input, this);
-				propertyInfo.setProperty(result, propertyValue);
+			unmarshalProperty: function (context, input, propertyInfo, result) {
+				try {
+					var propertyValue = propertyInfo.unmarshal(context, input, this);
+					propertyInfo.setProperty(result, propertyValue);
+				} catch (e) {
+					throw Jsonix.Model.ClassInfo.locateError(e, input, null);
+				}
 			},
-			unmarshalPropertyValue : function(context, input, propertyInfo,
-					result, value) {
-				var propertyValue = propertyInfo.unmarshalValue(value, context, input, this);
-				propertyInfo.setProperty(result, propertyValue);
+			unmarshalPropertyValue: function (context, input, propertyInfo, result, value) {
+				try {
+					var propertyValue = propertyInfo.unmarshalValue(value, context, input, this);
+					propertyInfo.setProperty(result, propertyValue);
+				} catch (e) {
+					throw Jsonix.Model.ClassInfo.locateError(e, input, propertyInfo.attributeName || null);
+				}
 			},
 			marshal : function(value, context, output, scope) {
 				if (this.isMarshallable(value, context, scope))
 				{
+					// jsonix-CR-006: report the element just opened for this value, once (a derived type's marshal calls the base type's marshal on the same element).
+					if (context.onElement) {
+						var openedElement = output.peek();
+						if (openedElement !== output.reportedElement) {
+							output.reportedElement = openedElement;
+							context.onElement(openedElement, value);
+						}
+					}
 					// TODO This must be reworked
 					if (Jsonix.Util.Type.exists(this.baseTypeInfo)) {
 						this.baseTypeInfo.marshal(value, context, output);
@@ -2701,6 +2726,32 @@ Jsonix.Model.ClassInfo.prototype.propertyInfoCreators = {
 	"elementRefs" : Jsonix.Model.ClassInfo.prototype.ers,
 	"v" : Jsonix.Model.ClassInfo.prototype.v,
 	"value" : Jsonix.Model.ClassInfo.prototype.v
+};
+// jsonix-CR-006 section 3.4: an error raised while reading a property is rethrown with the element (and attribute) it
+// was reading and, where the parser supplies one, the line; errors already located pass through unchanged.
+Jsonix.Model.ClassInfo.locateError = function (error, input, attributeName) {
+	if (!error || error.jsonixLocated || typeof error.message !== 'string') {
+		return error;
+	}
+	var node = input ? input.node : null;
+	var where = (node && node.nodeName) ? node.nodeName : '?';
+	if (attributeName) {
+		// Prefer the prefix a reader would see: the QName's own, else the one the element resolves for that namespace.
+		var attributePrefix = attributeName.prefix;
+		if (!attributePrefix && attributeName.namespaceURI && node && typeof node.lookupPrefix === 'function') {
+			attributePrefix = node.lookupPrefix(attributeName.namespaceURI);
+		}
+		where += '/@' + (attributePrefix ? attributePrefix + ':' : '') + attributeName.localPart;
+	}
+	if (node && typeof node.lineNumber === 'number') {
+		where += ' (line ' + node.lineNumber + ')';
+	}
+	var located = new Error(where + ': ' + error.message);
+	located.jsonixLocated = true;
+	located.cause = error;
+	located.node = node;
+	located.attributeName = attributeName || null;
+	return located;
 };
 Jsonix.Model.EnumLeafInfo = Jsonix.Class(Jsonix.Model.TypeInfo, {
 	name : null,
@@ -3624,7 +3675,11 @@ Jsonix.Model.AbstractElementRefsPropertyInfo = Jsonix.Class(Jsonix.Binding.Marsh
 			}
 		} else if (this.allowDom && Jsonix.Util.Type.exists(value.nodeType)) {
 			// DOM node
-			output.writeNode(value);
+			var importedNode = output.writeNode(value);
+			// jsonix-CR-006: wildcard DOM content is written as an imported copy; report the copy against the original node.
+			if (context.onElement) {
+				context.onElement(importedNode, value);
+			}
 		} else if (Jsonix.Util.Type.isObject(value)) {
 			this.marshalElement(value, context, output, scope);
 
@@ -3875,7 +3930,11 @@ Jsonix.Model.AnyElementPropertyInfo = Jsonix.Class(Jsonix.Binding.Marshalls.Elem
 			output.writeCharacters(value);
 		} else if (this.allowDom && Jsonix.Util.Type.exists(value.nodeType)) {
 			// DOM node
-			output.writeNode(value);
+			var importedNode = output.writeNode(value);
+			// jsonix-CR-006: wildcard DOM content is written as an imported copy; report the copy against the original node.
+			if (context.onElement) {
+				context.onElement(importedNode, value);
+			}
 
 		} else {
 			if (this.allowTypedObject) {
@@ -6209,11 +6268,26 @@ Jsonix.Context = Jsonix
 				return this.substitutionMembersMap[Jsonix.XML.QName
 						.fromObject(name).key];
 			},
-			createMarshaller : function() {
-				return new this.mappingStyle.marshaller(this);
+			createMarshaller: function (options) {
+				return new this.mappingStyle.marshaller(this.deriveContext(options));
 			},
-			createUnmarshaller : function() {
-				return new this.mappingStyle.unmarshaller(this);
+			createUnmarshaller: function (options) {
+				return new this.mappingStyle.unmarshaller(this.deriveContext(options));
+			},
+			deriveContext: function (options) {
+				// jsonix-CR-006: per-call options (callbacks, namespacePrefixes, parentPointers, ...) live on an object that
+				// inherits from this context, so they cannot leak between concurrent calls on a shared context.
+				if (!Jsonix.Util.Type.exists(options)) {
+					return this;
+				}
+				Jsonix.Util.Ensure.ensureObject(options);
+				var derived = Object.create(this);
+				for (var option in options) {
+					if (options.hasOwnProperty(option) && typeof options[option] !== 'undefined') {
+						derived[option] = options[option];
+					}
+				}
+				return derived;
 			},
 			getNamespaceURI : function(prefix) {
 				Jsonix.Util.Ensure.ensureString(prefix);

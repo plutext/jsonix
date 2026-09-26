@@ -102,6 +102,31 @@ context.namespacePrefixes['urn:x'] = 'x';
 // @ts-expect-error createDocument takes no arguments (the runtime ignores any passed)
 Jsonix.DOM.createDocument('', '');
 
+// (g) Dropped-content and written-element callbacks, per call (jsonix-CR-006, 3.4.0).
+const dropped: { name: string; line?: number }[] = [];
+const reporting = context.createUnmarshaller({
+  onUnexpectedElement: (qname, node, classInfo) => {
+    const line: number | undefined = (node as Node & { lineNumber?: number }).lineNumber;
+    dropped.push({ name: qname.localPart + ' in ' + classInfo.name, line });
+  },
+  onUnexpectedAttribute: (qname: Jsonix.XML.QName, node: Node) => void dropped.push({ name: '@' + qname.localPart + ' on ' + node.nodeName }),
+});
+const reported: PurchaseOrderElement = reporting.unmarshalString<PurchaseOrderElement>(xml);
+const written = new Map<Node, unknown>();
+const recording = context.createMarshaller({ onElement: (el, value) => void written.set(el, value) });
+const recordedXml: string = recording.marshalString(reported);
+const derived: typeof context = context.deriveContext({ parentPointers: true, onElement: () => undefined });
+// @ts-expect-error onElement is a marshalling callback, not an unmarshalling one
+context.createUnmarshaller({ onElement: () => undefined });
+// @ts-expect-error unknown option
+context.createMarshaller({ onUnexpectedElement: () => undefined });
+declare const err: unknown;
+if (err instanceof Error && (err as Partial<Jsonix.LocatedError>).jsonixLocated) {
+  const located = err as Jsonix.LocatedError;
+  const atLine: Node | null = located.node;
+  void atLine;
+}
+
 // (b) A generated interface is enough for the runtime's own QName / Calendar types.
 const runtimeCalendar: Jsonix.XML.Calendar | undefined = shipDate;
 const runtimeName: Jsonix.XML.QName = element.name;
@@ -128,5 +153,6 @@ export {
   name, zip, year, comment, typeName, itemParent, addressParent, rootParent, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
   untypedName, untypedValue, fromInterface, mixed, copiedPo, copiedAddress, asParented, runtimeCalendar, runtimeName,
   serialized, fresh, domAvailable, xlinkFix, perDocument, normalized10, normalized11, is11, current,
+  dropped, written, recordedXml, derived,
   out, doc, misspelt, wrongType, incomplete,
 };

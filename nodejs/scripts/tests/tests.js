@@ -8,6 +8,7 @@ module.exports =
 		"Util" : require('./util'),
 		"XML" : require('./xml'),
 		"DOM" : require('./dom'),
+		"Callbacks" : require('./callbacks'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

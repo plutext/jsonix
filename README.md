@@ -124,6 +124,10 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
   the runtime cannot detect its environment (workers, sandboxes), `Jsonix.DOM.use({ DOMParser, XMLSerializer,
   DOMImplementation })` supplies the DOM to use. In Node, XML 1.0 text keeps raw U+0085 and U+2028 (xmldom's default
   would turn them into line feeds).
+* `context.createUnmarshaller({ onUnexpectedElement, onUnexpectedAttribute })` reports what lax reading drops (not a
+  validator: wildcards keep content and report nothing), `context.createMarshaller({ onElement })` records which object
+  each written element came from, and an error from a wrongly typed value names the element, attribute and line. Options
+  given to `createUnmarshaller` / `createMarshaller` apply to that call only and never change the shared context.
 * `new Jsonix.Context(mappings, { parentPointers: true })` gives every unmarshalled typed object a non-enumerable
   `PARENT` pointing at its containing typed object (root objects have none), and `Jsonix.Util.deepCopy(value, parent?)`
   copies a subtree and re-links the pointers, like docx4j's `-Xparent-pointer` / `-Xdocx4j-copy` model. Generated

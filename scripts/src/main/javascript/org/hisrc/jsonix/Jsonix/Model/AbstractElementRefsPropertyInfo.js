@@ -91,7 +91,11 @@ Jsonix.Model.AbstractElementRefsPropertyInfo = Jsonix.Class(Jsonix.Binding.Marsh
 			}
 		} else if (this.allowDom && Jsonix.Util.Type.exists(value.nodeType)) {
 			// DOM node
-			output.writeNode(value);
+			var importedNode = output.writeNode(value);
+			// jsonix-CR-006: wildcard DOM content is written as an imported copy; report the copy against the original node.
+			if (context.onElement) {
+				context.onElement(importedNode, value);
+			}
 		} else if (Jsonix.Util.Type.isObject(value)) {
 			this.marshalElement(value, context, output, scope);
 

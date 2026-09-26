@@ -230,11 +230,26 @@ Jsonix.Context = Jsonix
 				return this.substitutionMembersMap[Jsonix.XML.QName
 						.fromObject(name).key];
 			},
-			createMarshaller : function() {
-				return new this.mappingStyle.marshaller(this);
+			createMarshaller: function (options) {
+				return new this.mappingStyle.marshaller(this.deriveContext(options));
 			},
-			createUnmarshaller : function() {
-				return new this.mappingStyle.unmarshaller(this);
+			createUnmarshaller: function (options) {
+				return new this.mappingStyle.unmarshaller(this.deriveContext(options));
+			},
+			deriveContext: function (options) {
+				// jsonix-CR-006: per-call options (callbacks, namespacePrefixes, parentPointers, ...) live on an object that
+				// inherits from this context, so they cannot leak between concurrent calls on a shared context.
+				if (!Jsonix.Util.Type.exists(options)) {
+					return this;
+				}
+				Jsonix.Util.Ensure.ensureObject(options);
+				var derived = Object.create(this);
+				for (var option in options) {
+					if (options.hasOwnProperty(option) && typeof options[option] !== 'undefined') {
+						derived[option] = options[option];
+					}
+				}
+				return derived;
 			},
 			getNamespaceURI : function(prefix) {
 				Jsonix.Util.Ensure.ensureString(prefix);

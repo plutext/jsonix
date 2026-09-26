@@ -174,6 +174,60 @@ export namespace Jsonix {
   export type UnmarshalOptions = object;
 
   /**
+   * Callbacks an unmarshaller reports dropped content through (jsonix-CR-006). Lax reading is the
+   * default and stays so: these only tell you what it dropped. Not a validator: a class with an
+   * `any` or `anyAttribute` wildcard keeps unknown content and reports nothing.
+   */
+  export interface UnmarshalCallbacks {
+    /**
+     * An element the class info did not expect is skipped. `node` is the DOM element the input
+     * stands on; in Node (xmldom) it carries `lineNumber` and `columnNumber`, in browsers not.
+     */
+    onUnexpectedElement?(name: XML.QName, node: Node, classInfo: ClassInfo): void;
+    /**
+     * An attribute the class info did not expect is dropped. `node` is the owning element (an
+     * attribute has no position of its own). Namespace declarations and, when `supportXsiType`
+     * is on, `xsi:type` are never reported.
+     */
+    onUnexpectedAttribute?(name: XML.QName, node: Node, classInfo: ClassInfo): void;
+  }
+
+  /** Callbacks a marshaller records what it writes through (jsonix-CR-006). */
+  export interface MarshalCallbacks {
+    /**
+     * Called once for every element written from a typed object, with the DOM element and the
+     * object; and for wildcard DOM content, with the imported copy in the output document and the
+     * original node. Elements holding a simple value are not reported (their owner is).
+     */
+    onElement?(element: Node, value: unknown): void;
+  }
+
+  /** Per-call options for `createUnmarshaller`; anything set here overrides the context for that unmarshaller only. */
+  export interface UnmarshallerOptions extends UnmarshalCallbacks {
+    parentPointers?: boolean;
+    supportXsiType?: boolean;
+  }
+
+  /** Per-call options for `createMarshaller`; anything set here overrides the context for that marshaller only. */
+  export interface MarshallerOptions extends MarshalCallbacks {
+    namespacePrefixes?: { [namespaceURI: string]: string };
+    supportXsiType?: boolean;
+  }
+
+  /**
+   * An error raised while reading a property, rethrown with its location (jsonix-CR-006 section
+   * 3.4): the message starts with the element's node name, `/@attribute` when an attribute was
+   * being read, and `(line N)` when the parser supplied one, e.g.
+   * `w:sz/@w:val (line 12): Argument [NaN] must be an integer, but it is not a number.`
+   */
+  export interface LocatedError extends Error {
+    readonly jsonixLocated: true;
+    readonly cause: Error;
+    readonly node: Node | null;
+    readonly attributeName: XML.QName | null;
+  }
+
+  /**
    * R is the union of root element types inferred from the context's mappings; each method can
    * narrow it with an explicit type argument, e.g. `unmarshalString<PurchaseOrderElement>(xml)`.
    */
@@ -223,8 +277,22 @@ export namespace Jsonix {
      */
     readonly namespacePrefixes: { readonly [namespaceURI: string]: string };
 
-    createUnmarshaller(): Unmarshaller<RootElementOf<M>>;
-    createMarshaller(): Marshaller;
+    /** An unmarshaller over this context, optionally with per-call options on a derived context (jsonix-CR-006). */
+    createUnmarshaller(options?: UnmarshallerOptions): Unmarshaller<RootElementOf<M>>;
+    /** A marshaller over this context, optionally with per-call options on a derived context (jsonix-CR-006). */
+    createMarshaller(options?: MarshallerOptions): Marshaller;
+    /**
+     * An object inheriting from this context with the given options set on it; what
+     * `createUnmarshaller(options)` and `createMarshaller(options)` use. `undefined` values are
+     * ignored; no options returns this context itself.
+     */
+    deriveContext(options?: UnmarshallerOptions & MarshallerOptions & Partial<ContextOptions>): Context<M>;
+
+    /** Set when this is a derived context (see `deriveContext`); read by the unmarshaller. */
+    readonly onUnexpectedElement?: UnmarshalCallbacks['onUnexpectedElement'];
+    readonly onUnexpectedAttribute?: UnmarshalCallbacks['onUnexpectedAttribute'];
+    /** Set when this is a derived context; read by the marshaller. */
+    readonly onElement?: MarshalCallbacks['onElement'];
 
     getTypeInfoByName(name: string): TypeInfo;
     getTypeInfoByTypeName(typeName: string): TypeInfo;

@@ -1,6 +1,6 @@
 # jsonix-CR-006: Report what unmarshalling drops, and record what marshalling writes: two optional context callbacks
 
-**Status:** Proposed 2026-09-27
+**Status:** Implemented 2026-09-27, version 3.4.0, with three amendments to section 3 found by testing (section 9)
 **Depends on:** nothing; 3.3.0 is the baseline
 **Requested by:** `plutext/docx4j-core-ts` CR-002 section 27 (a person edits a part's XML in the
 editor's parts panel and must be told what will not be saved) and its CR-006 (XPath over the
@@ -224,3 +224,78 @@ does not attempt.
 - **Not a position tracker.** The runtime does not start recording lines and columns of its own; it
   hands over the DOM node it is standing on and lets the parser's locator, where there is one,
   supply the position.
+
+## 9. Runtime review and implementation notes (2026-09-27)
+
+Accepted and implemented as proposed, with `createUnmarshaller(options)` / `createMarshaller(options)`
+taken up as the surface (section 4's friendlier alternative), and three amendments that testing
+against the runtime forced. Each is the same kind of finding as section 2's: a place where the
+runtime keeps or consumes content that a naive hook would have reported as dropped, or reports
+twice.
+
+**Amendment 1: `xsi:type` is iterated by the attribute loop.** Section 3.2 says `supportXsiType`
+consumes it "before this loop is reached". It does not: the element unmarshaller reads the
+attribute's *value* to choose the type, but the attribute stays in the DOM and the loop over
+`getAttributeCount()` visits it, so the hook as specified would have reported `xsi:type` on every
+polymorphic element. The implementation excludes the XSI `type` attribute when
+`context.supportXsiType` is on. When it is off, the attribute really is dropped and is reported,
+and so are the derived type's own attributes, because the element is then read as the base type;
+the test `XsiTypeReportedWhenNotSupported` pins both.
+
+**Amendment 2: an `anyAttribute` wildcard keeps unknown attributes.** The attribute twin of section
+2's finding 2: a class with an `anyAttribute` property puts every attribute not otherwise mapped
+into that map (namespace declarations included), so nothing is dropped and the hook is silent for
+such a class. Section 3.2 had no such condition.
+
+**Amendment 3: a derived type's marshal enters `ClassInfo.marshal` twice for one element.**
+`ClassInfo.marshal` calls `this.baseTypeInfo.marshal(value, ...)` on the same output element, so
+the hook of section 3.3, placed at the top of `marshal`, fired once per level of inheritance. The
+implementation remembers the last reported element on the output (`output.reportedElement`) and
+reports each element once, at the most derived level.
+
+**Everything else as specified.** `onUnexpectedElement(name, node, classInfo)` at the skip;
+`onUnexpectedAttribute(name, node, classInfo)` in the attribute loop (the class info added for
+symmetry), silent for the XMLNS namespace; `onElement(element, value)` at the top of the
+marshallable branch of `ClassInfo.marshal` and at both `writeNode` sites, the latter reporting the
+imported copy against the original node; the located error of section 3.4 as
+`Jsonix.Model.ClassInfo.locateError`, applied in `unmarshalProperty` (elements) and
+`unmarshalPropertyValue` (attributes), producing e.g.
+`t:style/@size (line 2): Argument [NaN] must be an integer, but it is not a number.` with `cause`,
+`node`, `attributeName` and a `jsonixLocated` flag so that an error is located once, at the
+innermost property, and passes unchanged through the enclosing levels.
+
+**Per-call options.** `Context.deriveContext(options)` returns `Object.create(this)` with the
+options copied on (undefined values ignored; no options returns the context itself), and
+`createUnmarshaller(options)` / `createMarshaller(options)` pass through it. Any context property
+can be set that way for one call: the callbacks, and also `parentPointers`, `supportXsiType` and
+`namespacePrefixes`, which is the pattern `docx4j-generated-objects-ts` had been applying by hand.
+The shared context is never written. Note that a `namespacePrefixes` override changes the prefix
+only for names that do not already carry one; a QName unmarshalled from input keeps its prefix, as
+before (that is jsonix-CR-003 part 2's territory).
+
+**Typings** (`types/main.d.ts`): `Jsonix.UnmarshalCallbacks`, `Jsonix.MarshalCallbacks`,
+`Jsonix.UnmarshallerOptions`, `Jsonix.MarshallerOptions`, `Jsonix.LocatedError`;
+`Context.createUnmarshaller(options?)`, `createMarshaller(options?)`, `deriveContext(options?)`, and
+the three callbacks as optional read-only members of `Context`. `usage.ts` checks them, including
+that a marshalling callback is rejected on `createUnmarshaller`.
+
+**Tests** (`tests/callbacks.js`, 37 assertions): the six of section 6, plus the three amendments,
+`supportXsiType: false` reporting, `deriveContext` identity and non-leakage, `parentPointers` and
+`namespacePrefixes` as per-call options. Applied to all three copies of the library; existing
+suites, type-checks, ESM smoke and bundle tests unchanged.
+
+**Consumer follow-up:** `docx4j-generated-objects-ts` passes the options through `marshalNode` /
+`unmarshalNode` (its facade) so that core-ts CR-002 section 27 and CR-006 can use them.
+
+**Verified by core-ts against the checkout before release (2026-09-27):** 514 tests, typecheck clean,
+181 parity assertions against the docx4j goldens; every XML part a load re-marshals, 447 parts over
+51 fixtures (docx, pptx, xlsx and the 37 parity documents), hashes byte-identically under 3.3.0 and
+3.4.0, so amendment 3's dedup changes no output. The real case from core-ts CR-002 section 27
+(`comments-two.docx`'s `styles.xml` with four edits) reports all three drops with class info and
+position through the objects context, and the typed value throws located. Two notes from that run:
+a typed-value error aborts the unmarshal, so a caller sees only the drops *before* the bad value
+(inherent; core-ts's `validateXml` contract says "complete for drops, first-only for type errors"),
+and the located message originally spelled a namespaced attribute as
+`@{http://...}val`; it now resolves the prefix on the element, `w:sz/@w:val`, falling back to the
+QName's own prefix and then the local name. core-ts recorded the corrected `xsi:type` claim in its
+CR-002 section 27.
