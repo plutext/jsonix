@@ -310,3 +310,12 @@ fires for such a class and the unmarshal aborts instead. Reproduced identically 
 fix is small and lax in the direction the runtime already claims: skip and report every child of an
 element-less class rather than assert, or at least locate the error through `locateError`; it
 changes an error path into a lax one, so it is proposed separately rather than folded in here.
+
+**Reading note from objects-ts (2026-09-27), queued for the next release:** the unexpected-attribute
+report is inside the pre-existing `if (exists(this.structure.attributes))` guard. `structure.attributes`
+is always initialised to `{}` when the structure is built, so the guard never bites today, but the
+report now depends on an initialisation that was previously only deciding whether there was anything
+to read. Hoist the report out of the guard (or assert the field) so the firing is structural, and say
+in a comment that the initialisation is load-bearing. Not changed in 3.4.0: the tag was verified and
+the behaviour is correct as shipped. The precise firing conditions are now relied on by objects-ts's
+fidelity test and core-ts's `validateXml` (recorded in `CLAUDE.md`'s contract table).
