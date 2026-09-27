@@ -329,3 +329,14 @@ fidelity test and core-ts's `validateXml` (recorded in `CLAUDE.md`'s contract ta
 an inventory of everything its package silently drops and found two losses nobody knew of, one a
 docx4j schema gap (`w:stylePaneFormatFilter` typed `CT_ShortHexNumber` in `wml.xsd`, so Word's fifteen
 booleans on it are lost). Neither was findable by diffing. core-ts CR-001 section 21.1 has the list.
+
+**Consumer release (objects-ts, 2026-09-27):** `@docx4j/generated-objects-ts` 0.3.0 carries its CR-007
+and depends on `@docx4j/jsonix ^3.4.0`: all four facade entry points forward per-call options to
+`createUnmarshaller` / `createMarshaller`, and `marshalToDocument`'s hand-rolled `Object.create`
+derivation for the per-root prefix table is replaced by the `namespacePrefixes` marshaller option
+with its CR-001 prefix tests untouched. The same release carries the jsonix-CR-005 acceptance check
+(no DOM globals set in its bundle test, plus a `require()` witness). Cross-check: core-ts's callback
+inventory over 467 parts and objects-ts's canonical-diff test over a different corpus each report
+seventeen distinct dropped attributes, the same seventeen; exact agreement for attributes only, since
+the callbacks see what unmarshalling drops and the diff sees the whole round trip (objects-ts CR-004
+section 11).
