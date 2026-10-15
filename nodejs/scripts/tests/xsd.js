@@ -20,6 +20,10 @@ module.exports =
 		test.equal(true, Jsonix.Schema.XSD.Boolean.INSTANCE.parse('1'));
 		test.equal(false, Jsonix.Schema.XSD.Boolean.INSTANCE.parse('false'));
 		test.equal(false, Jsonix.Schema.XSD.Boolean.INSTANCE.parse('0'));
+		// jsonix-CR-007: ECMA-376 Transitional's on/off read as booleans and print as true/false
+		test.equal(true, Jsonix.Schema.XSD.Boolean.INSTANCE.parse('on'));
+		test.equal(false, Jsonix.Schema.XSD.Boolean.INSTANCE.parse('off'));
+		test.equal('false', Jsonix.Schema.XSD.Boolean.INSTANCE.print(Jsonix.Schema.XSD.Boolean.INSTANCE.parse('off')));
 		test.equal('true', Jsonix.Schema.XSD.Boolean.INSTANCE.print(true));
 		test.equal('false', Jsonix.Schema.XSD.Boolean.INSTANCE.print(false));
 		try {
@@ -29,6 +33,9 @@ module.exports =
 		} catch (e) {
 			// Expected exception
 		}
+		['On', 'OFF', ' on', 'yes', 'no', ''].forEach(function (text) {
+			test.throws(function () { Jsonix.Schema.XSD.Boolean.INSTANCE.parse(text); }, Error, 'rejects [' + text + ']');
+		});
 		test.done();
 	},
 	"List": function(test) {
