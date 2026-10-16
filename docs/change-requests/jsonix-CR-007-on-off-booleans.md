@@ -1,6 +1,6 @@
 # jsonix-CR-007: `on` and `off` read as booleans, as ECMA-376 Transitional allows and Office reads
 
-**Status:** Implemented 2026-10-16 (section 6), unreleased; proposed for 3.4.1
+**Status:** Implemented 2026-10-16 (section 6), version 3.4.1
 **Depends on:** nothing; 3.4.0 is the baseline
 **Requested by:** `plutext/docx4j-core-ts`, relaying `plutext/docx4j-ts-editor` (2026-10-16): a valid
 document of Jason's, written by pandoc 3.6.1, would not open in the editor
