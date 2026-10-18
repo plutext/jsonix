@@ -2141,7 +2141,7 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 			if (Jsonix.Util.Type.exists(options)) {
 				Jsonix.Util.Ensure.ensureObject(options);
 			}
-			that = this;
+			var that = this;
 			Jsonix.DOM.load(url, function (doc) {
 				callback(that.unmarshalDocument(doc));
 			}, options);
@@ -2155,7 +2155,7 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 			if (Jsonix.Util.Type.exists(options)) {
 				Jsonix.Util.Ensure.ensureObject(options);
 			}
-			that = this;
+			var that = this;
 			var fs = _jsonix_fs;
 			fs.readFile(fileName, options, function (err, data) {
 				if (err) {
@@ -4486,7 +4486,7 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 		},
 		decode: function (text) {
 
-			input = text.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+			var input = text.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 
 			var length = Math.floor(input.length / 4 * 3);
 			if (input.charAt(input.length - 1) === "=") {

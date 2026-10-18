@@ -13,6 +13,7 @@ module.exports =
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),
 		"Issues" : require('./issues'),
+		"Strict" : require('./strict'),
 		"TypeScript" : require('./typescript/typescript'),
 		// Last: it binds port 8080 and aborts the run when the port is taken.
 		"Request" : require('./request')

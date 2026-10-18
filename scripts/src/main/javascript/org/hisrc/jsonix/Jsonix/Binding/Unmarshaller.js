@@ -17,7 +17,7 @@ Jsonix.Binding.Unmarshaller = Jsonix.Class(Jsonix.Binding.Unmarshalls.Element, J
 		if (Jsonix.Util.Type.exists(options)) {
 			Jsonix.Util.Ensure.ensureObject(options);
 		}
-		that = this;
+		var that = this;
 		Jsonix.DOM.load(url, function(doc) {
 			callback(that.unmarshalDocument(doc));
 		}, options);
@@ -31,7 +31,7 @@ Jsonix.Binding.Unmarshaller = Jsonix.Class(Jsonix.Binding.Unmarshalls.Element, J
 		if (Jsonix.Util.Type.exists(options)) {
 			Jsonix.Util.Ensure.ensureObject(options);
 		}
-		that = this;
+		var that = this;
 		var fs = _jsonix_fs;
 		fs.readFile(fileName, options, function(err, data) {
 			if (err) {

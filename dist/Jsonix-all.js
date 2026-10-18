@@ -31,7 +31,7 @@ Jsonix.Util.extend = function(destination, source) {
 
 		// REWORK
 		// Node.js
-		sourceIsEvt = typeof window !== 'undefined' && window !== null && typeof window.Event === "function" && source instanceof window.Event;
+		var sourceIsEvt = typeof window !== 'undefined' && window !== null && typeof window.Event === "function" && source instanceof window.Event;
 
 		if (!sourceIsEvt && source.hasOwnProperty && source.hasOwnProperty('toString')) {
 			destination.toString = source.toString;
@@ -2229,7 +2229,7 @@ Jsonix.Binding.Unmarshaller = Jsonix.Class(Jsonix.Binding.Unmarshalls.Element, J
 		if (Jsonix.Util.Type.exists(options)) {
 			Jsonix.Util.Ensure.ensureObject(options);
 		}
-		that = this;
+		var that = this;
 		Jsonix.DOM.load(url, function(doc) {
 			callback(that.unmarshalDocument(doc));
 		}, options);
@@ -2243,7 +2243,7 @@ Jsonix.Binding.Unmarshaller = Jsonix.Class(Jsonix.Binding.Unmarshalls.Element, J
 		if (Jsonix.Util.Type.exists(options)) {
 			Jsonix.Util.Ensure.ensureObject(options);
 		}
-		that = this;
+		var that = this;
 		var fs = _jsonix_fs;
 		fs.readFile(fileName, options, function(err, data) {
 			if (err) {
@@ -4606,7 +4606,7 @@ Jsonix.Schema.XSD.Base64Binary = Jsonix.Class(Jsonix.Schema.XSD.AnySimpleType, {
 	},
 	decode : function(text) {
 
-		input = text.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+		var input = text.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 
 		var length = Math.floor(input.length / 4 * 3);
 		if (input.charAt(input.length - 1) === "=") {

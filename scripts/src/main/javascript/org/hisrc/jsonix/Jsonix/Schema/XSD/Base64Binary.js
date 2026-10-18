@@ -63,7 +63,7 @@ Jsonix.Schema.XSD.Base64Binary = Jsonix.Class(Jsonix.Schema.XSD.AnySimpleType, {
 	},
 	decode : function(text) {
 
-		input = text.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+		var input = text.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 
 		var length = Math.floor(input.length / 4 * 3);
 		if (input.charAt(input.length - 1) === "=") {
