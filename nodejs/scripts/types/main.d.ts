@@ -190,6 +190,17 @@ export namespace Jsonix {
      * is on, `xsi:type` are never reported.
      */
     onUnexpectedAttribute?(name: XML.QName, node: Node, classInfo: ClassInfo): void;
+    /**
+     * Called once for every element read as a typed object (jsonix-CR-008), with the source
+     * element and the object, once the object is complete: its attributes and content are read and
+     * its `PARENT` is set, so children are reported before their parent. An `xsi:type` element is
+     * reported once, as its derived type. The element is the source node itself, in its own
+     * document, so `lookupNamespaceURI` sees its ancestors' declarations. Not reported: elements
+     * holding a simple value (their owner is), `{ name, value }` wrappers (their value is), and
+     * wildcard DOM content, which the unmarshaller puts in the tree as the source node itself, not
+     * a copy. If unmarshalling throws, the calls already made stand.
+     */
+    onElement?(element: Element, value: object): void;
   }
 
   /** Callbacks a marshaller records what it writes through (jsonix-CR-006). */
@@ -291,8 +302,11 @@ export namespace Jsonix {
     /** Set when this is a derived context (see `deriveContext`); read by the unmarshaller. */
     readonly onUnexpectedElement?: UnmarshalCallbacks['onUnexpectedElement'];
     readonly onUnexpectedAttribute?: UnmarshalCallbacks['onUnexpectedAttribute'];
-    /** Set when this is a derived context; read by the marshaller. */
-    readonly onElement?: MarshalCallbacks['onElement'];
+    /**
+     * Set when this is a derived context; read by the marshaller (jsonix-CR-006) or the
+     * unmarshaller (jsonix-CR-008), whichever the derived context was created for.
+     */
+    readonly onElement?: MarshalCallbacks['onElement'] | UnmarshalCallbacks['onElement'];
 
     getTypeInfoByName(name: string): TypeInfo;
     getTypeInfoByTypeName(typeName: string): TypeInfo;

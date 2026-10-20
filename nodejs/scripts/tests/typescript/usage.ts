@@ -116,8 +116,11 @@ const written = new Map<Node, unknown>();
 const recording = context.createMarshaller({ onElement: (el, value) => void written.set(el, value) });
 const recordedXml: string = recording.marshalString(reported);
 const derived: typeof context = context.deriveContext({ parentPointers: true, onElement: () => undefined });
-// @ts-expect-error onElement is a marshalling callback, not an unmarshalling one
-context.createUnmarshaller({ onElement: () => undefined });
+// The unmarshal-side onElement (jsonix-CR-008, 3.5.0): the source Element and the typed object.
+const sources = new WeakMap<object, string | null>();
+context.createUnmarshaller({ onElement: (el, value) => void sources.set(value, el.lookupNamespaceURI('zz9')) });
+// @ts-expect-error the unmarshal-side onElement passes no class info
+context.createUnmarshaller({ onElement: (el: Element, value: object, classInfo: Jsonix.ClassInfo) => undefined });
 // @ts-expect-error unknown option
 context.createMarshaller({ onUnexpectedElement: () => undefined });
 declare const err: unknown;

@@ -141,13 +141,15 @@ gets `this.mappingStyle` from `options.mappingStyle`.
 **Property infos** (`Jsonix.Model.*PropertyInfo`): attribute, value, element, elements, elementRef(s),
 elementMap, anyAttribute, anyElement. Each contributes to the owning class's `structure` via `buildStructure`.
 
-**Per-call options and callbacks (jsonix-CR-006).** `Context.createUnmarshaller(options)` and `createMarshaller(options)`
+**Per-call options and callbacks (jsonix-CR-006, CR-008).** `Context.createUnmarshaller(options)` and `createMarshaller(options)`
 build the binder over `deriveContext(options)`, an `Object.create(context)` with the options copied on, so callbacks
 (`onUnexpectedElement`, `onUnexpectedAttribute`, `onElement`), `parentPointers`, `supportXsiType` and `namespacePrefixes`
 can be set per call and the shared context is never written. The hooks sit in `ClassInfo` (attribute loop, element skip,
-top of `marshal`, deduped per output element) and at the two `writeNode` sites; wildcards keep content and report
-nothing. Errors from `unmarshalProperty` / `unmarshalPropertyValue` are rethrown once via `ClassInfo.locateError` with
-element, attribute and line.
+top of `marshal`, deduped per output element, and end of `unmarshal`, where `onElement` reports the source element
+captured on entry with the complete object, children first) and at the two `writeNode` sites; wildcards keep content
+and report nothing, and wildcard DOM content is the source node itself (a documented promise since CR-008). Errors
+from `unmarshalProperty` / `unmarshalPropertyValue` are rethrown once via `ClassInfo.locateError` with element,
+attribute and line.
 
 **Binding.** `Jsonix.Binding.Marshaller` / `Unmarshaller` are composed from `Marshalls.Element` /
 `Unmarshalls.Element` mixins plus an `AsElementRef` (or `AsSimplifiedElementRef`) mixin that decides how a

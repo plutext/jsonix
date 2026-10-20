@@ -131,6 +131,8 @@ Jsonix.Model.ClassInfo = Jsonix
 				if (input.eventType !== 1) {
 					throw new Error("Parser must be on START_ELEMENT to read a class info.");
 				}
+				// jsonix-CR-008: the element this object is read from, taken before its content moves the input on.
+				var sourceElement = input.node;
 
 				// Read attributes
 				if (Jsonix.Util.Type.exists(this.structure.attributes)) {
@@ -223,6 +225,11 @@ Jsonix.Model.ClassInfo = Jsonix
 				}
 				if (parentStack) {
 					parentStack.pop();
+				}
+				// jsonix-CR-008: report the complete object with the element it was read from: once per element (an
+				// xsi:type element as its derived type), children before their parent; simple values and wildcard DOM never.
+				if (context.onElement) {
+					context.onElement(sourceElement, result);
 				}
 				return result;
 			},

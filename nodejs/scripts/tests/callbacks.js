@@ -1,6 +1,6 @@
 // jsonix-CR-006: report what unmarshalling drops (onUnexpectedElement, onUnexpectedAttribute),
 // record what marshalling writes (onElement), locate errors from wrongly typed values, and the
-// per-call options on createUnmarshaller / createMarshaller.
+// per-call options on createUnmarshaller / createMarshaller. jsonix-CR-008: the unmarshal-side onElement.
 var Jsonix = require('../jsonix').Jsonix;
 
 var NS = 'urn:test';
@@ -19,12 +19,14 @@ var mapping = {
 			{ name: 'id', type: 'attribute' },
 			{ name: 'others', type: 'anyAttribute' },
 			{ name: 'content', type: 'anyElement', collection: true, allowDom: true, allowTypedObject: true }
-		] }
+		] },
+		{ localName: 'Refs', propertyInfos: [{ name: 'item', type: 'elementRef', elementName: 'style', typeInfo: '.Style', collection: true }] }
 	],
 	elementInfos: [
 		{ elementName: 'styles', typeInfo: '.Styles' },
 		{ elementName: 'style', typeInfo: '.Style' },
-		{ elementName: 'open', typeInfo: '.Open' }
+		{ elementName: 'open', typeInfo: '.Open' },
+		{ elementName: 'refs', typeInfo: '.Refs' }
 	]
 };
 var context = new Jsonix.Context([mapping]);
@@ -119,6 +121,85 @@ module.exports = {
 			test.ok(wildcard[0] !== original, 'the output holds an imported copy');
 			test.equal('drawing', wildcard[0].localName);
 			test.strictEqual(doc.documentElement.firstChild, wildcard[0], 'and the copy is the node in the output document');
+			test.done();
+		}
+	},
+	// jsonix-CR-008: the unmarshal-side onElement(element, value), once per element read as a typed object.
+	"UnmarshalOnElement": {
+		"EveryTypedElementOnceChildrenFirst": function (test) {
+			var doc = Jsonix.DOM.parse(STYLES);
+			var read = [];
+			var styles = context.createUnmarshaller({ onElement: function (el, value) { read.push([el, value]); } })
+				.unmarshalDocument(doc).value;
+			var sources = doc.documentElement.getElementsByTagNameNS(NS, 'style');
+			test.equal(3, read.length, 'two styles and the root; the bogus element is skipped, the wrapper is not reported');
+			test.strictEqual(sources[0], read[0][0], 'the source element itself, in its own document');
+			test.strictEqual(styles.style[0], read[0][1]);
+			test.strictEqual(sources[1], read[1][0]);
+			test.strictEqual(styles.style[1], read[1][1]);
+			test.equal('test.BigStyle', read[1][1].TYPE_NAME, 'an xsi:type element is reported once, as its derived type');
+			test.strictEqual(doc.documentElement, read[2][0], 'the parent after its children');
+			test.strictEqual(styles, read[2][1]);
+			test.done();
+		},
+		"ReportedComplete": function (test) {
+			var seen = [];
+			var styles = context.createUnmarshaller({
+				parentPointers: true,
+				onElement: function (el, value) { seen.push({ id: value.id, size: value.size, parent: value.PARENT, styles: value.style && value.style.length }); }
+			}).unmarshalString(STYLES).value;
+			test.deepEqual({ id: 'Normal', size: 20, parent: styles, styles: undefined }, seen[0], 'attributes read and PARENT set');
+			test.equal(2, seen[2].styles, 'the root is reported with its content read');
+			test.done();
+		},
+		"SimpleValuesAndWildcardDomNotReported": function (test) {
+			var doc = Jsonix.DOM.parse('<t:open xmlns:t="urn:test"><t:style id="a"><t:name>N</t:name></t:style><w:drawing xmlns:w="urn:w"><w:inline/></w:drawing></t:open>');
+			var read = [];
+			var open = context.createUnmarshaller({ onElement: function (el, value) { read.push(el.localName); } }).unmarshalDocument(doc).value;
+			test.deepEqual(['style', 'open'], read, 'not t:name (a simple value) nor the DOM content');
+			test.strictEqual(doc.documentElement.childNodes[1], open.content[1], 'wildcard DOM content is the source node itself, not a copy');
+			test.done();
+		},
+		"ElementRefWrapperNotReported": function (test) {
+			var read = [];
+			var refs = context.createUnmarshaller({ onElement: function (el, value) { read.push(value); } })
+				.unmarshalString('<t:refs xmlns:t="urn:test"><t:style id="a"/></t:refs>').value;
+			test.equal(2, read.length);
+			test.strictEqual(refs.item[0].value, read[0], 'the typed object, not its { name, value } wrapper');
+			test.done();
+		},
+		"AncestorDeclarationsInScope": function (test) {
+			var prefixes = [];
+			context.createUnmarshaller({ onElement: function (el) { prefixes.push(el.lookupNamespaceURI('zz9')); } })
+				.unmarshalString('<t:styles xmlns:t="urn:test" xmlns:zz9="urn:private"><t:style id="a"/></t:styles>');
+			test.deepEqual(['urn:private', 'urn:private'], prefixes, 'a prefix declared on an ancestor resolves on the reported element');
+			test.done();
+		},
+		"CallsBeforeAnErrorStand": function (test) {
+			var read = [];
+			test.throws(function () {
+				context.createUnmarshaller({ onElement: function (el, value) { read.push(value.id); } })
+					.unmarshalString('<t:styles xmlns:t="urn:test"><t:style id="a"/><t:style id="b" size="x"/></t:styles>');
+			});
+			test.deepEqual(['a'], read, 'the element that failed and its parent are never complete, so never reported');
+			test.done();
+		},
+		"UnsetChangesNothing": function (test) {
+			var plain = context.createUnmarshaller().unmarshalString(STYLES);
+			var reported = context.createUnmarshaller({ onElement: function () {} }).unmarshalString(STYLES);
+			test.deepEqual(plain, reported);
+			test.equal(context.createMarshaller().marshalString(plain), context.createMarshaller().marshalString(reported));
+			test.done();
+		},
+		"MarshalAndUnmarshalCallbacksSeparate": function (test) {
+			var unmarshalReports = [];
+			var marshalReports = [];
+			var element = context.createUnmarshaller({ onElement: function () { unmarshalReports.push(1); } }).unmarshalString(STYLES);
+			context.createMarshaller({ onElement: function () { marshalReports.push(1); } }).marshalString(element);
+			context.createUnmarshaller().unmarshalString(STYLES);
+			test.equal(3, unmarshalReports.length);
+			test.equal(3, marshalReports.length);
+			test.equal('undefined', typeof context.onElement, 'each lives on its own derived context');
 			test.done();
 		}
 	},
