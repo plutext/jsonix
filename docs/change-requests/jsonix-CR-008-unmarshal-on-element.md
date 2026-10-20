@@ -1,6 +1,6 @@
 # jsonix-CR-008: An unmarshal-side `onElement(element, value)`: the source element each typed object was read from
 
-**Status:** Implemented 2026-10-20 (section 7), unreleased; 3.5.0 proposed
+**Status:** Implemented 2026-10-20 (section 7), version 3.5.0
 **Depends on:** nothing; 3.4.2 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts` CR-011 (`docs/change-requests/CR-011-declare-source-only-prefixes.md`),
 2026-10-20, on Jason's decision that day to take it into the runtime rather than into a facade-side wrapper
