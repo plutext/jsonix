@@ -308,6 +308,23 @@ export namespace Jsonix {
      */
     readonly onElement?: MarshalCallbacks['onElement'] | UnmarshalCallbacks['onElement'];
 
+    /**
+     * The xsd default of an attribute property (jsonix-CR-009): the mapping's `defaultValue` (or `dv`), which
+     * jsonix-schema-compiler emits in the runtime's representation. Looked up on the class info named `typeName`
+     * (what `TYPE_NAME` carries), then on its base types. `undefined` when the property is not an attribute
+     * property, has no default, or is not declared; throws when `typeName` names no class info of this context.
+     * Unmarshalling and marshalling never apply it.
+     */
+    getDefaultValue(typeName: string, propertyName: string): unknown;
+    /**
+     * `object[propertyName]` when it exists (neither `undefined` nor `null`: the test marshal uses to write it),
+     * else `getDefaultValue(typeName ?? object.TYPE_NAME, propertyName)`, as a JAXB getter supplies an absent
+     * attribute's default (jsonix-CR-009). Throws when the object has no `TYPE_NAME` and no `typeName` is given,
+     * or when the type is not a class info of this context, whether or not the value is present. The result keeps
+     * the property's declared type, so an optional property stays optional.
+     */
+    valueOrDefault<T extends object, K extends keyof T & string>(object: T, propertyName: K, typeName?: string): T[K];
+
     getTypeInfoByName(name: string): TypeInfo;
     getTypeInfoByTypeName(typeName: string): TypeInfo;
     getTypeInfoByTypeNameKey(typeNameKey: string): TypeInfo;

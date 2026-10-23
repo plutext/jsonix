@@ -123,6 +123,14 @@ context.createUnmarshaller({ onElement: (el, value) => void sources.set(value, e
 context.createUnmarshaller({ onElement: (el: Element, value: object, classInfo: Jsonix.ClassInfo) => undefined });
 // @ts-expect-error unknown option
 context.createMarshaller({ onUnexpectedElement: () => undefined });
+// Schema defaults on read (jsonix-CR-009): the object is unchanged, the default comes from the context.
+const countryDefault: unknown = context.getDefaultValue('PO.USAddress', 'country');
+const country: string | undefined = context.valueOrDefault(po.shipTo, 'country');
+const billToCountry: string | undefined = derived.valueOrDefault(po.billTo, 'country', 'PO.USAddress');
+// @ts-expect-error not a property of USAddress
+context.valueOrDefault(po.shipTo, 'nme');
+// @ts-expect-error the property name is required
+context.getDefaultValue('PO.USAddress');
 declare const err: unknown;
 if (err instanceof Error && (err as Partial<Jsonix.LocatedError>).jsonixLocated) {
   const located = err as Jsonix.LocatedError;
@@ -156,6 +164,6 @@ export {
   name, zip, year, comment, typeName, itemParent, addressParent, rootParent, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
   untypedName, untypedValue, fromInterface, mixed, copiedPo, copiedAddress, asParented, runtimeCalendar, runtimeName,
   serialized, fresh, domAvailable, xlinkFix, perDocument, normalized10, normalized11, is11, current,
-  dropped, written, recordedXml, derived,
+  dropped, written, recordedXml, derived, countryDefault, country, billToCountry,
   out, doc, misspelt, wrongType, incomplete,
 };

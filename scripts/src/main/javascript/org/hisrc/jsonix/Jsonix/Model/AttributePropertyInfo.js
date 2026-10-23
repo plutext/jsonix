@@ -1,5 +1,6 @@
 Jsonix.Model.AttributePropertyInfo = Jsonix.Class(Jsonix.Model.SingleTypePropertyInfo, {
 	attributeName : null,
+	defaultValue : undefined,
 	initialize : function(mapping) {
 		Jsonix.Util.Ensure.ensureObject(mapping);
 		Jsonix.Model.SingleTypePropertyInfo.prototype.initialize.apply(this, [ mapping ]);
@@ -10,6 +11,12 @@ Jsonix.Model.AttributePropertyInfo = Jsonix.Class(Jsonix.Model.SingleTypePropert
 			this.attributeName = new Jsonix.XML.QName(this.defaultAttributeNamespaceURI, an);
 		} else {
 			this.attributeName = new Jsonix.XML.QName(this.defaultAttributeNamespaceURI, this.name);
+		}
+		// jsonix-CR-009: the schema default, kept for Context.getDefaultValue; unmarshal and marshal never read it.
+		if (Jsonix.Util.Type.exists(mapping.defaultValue)) {
+			this.defaultValue = mapping.defaultValue;
+		} else if (Jsonix.Util.Type.exists(mapping.dv)) {
+			this.defaultValue = mapping.dv;
 		}
 	},
 	unmarshal : function(context, input, scope) {

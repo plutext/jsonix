@@ -3129,6 +3129,7 @@ Jsonix.Model.SingleTypePropertyInfo = Jsonix.Class(Jsonix.Model.PropertyInfo, {
 
 Jsonix.Model.AttributePropertyInfo = Jsonix.Class(Jsonix.Model.SingleTypePropertyInfo, {
 	attributeName : null,
+	defaultValue : undefined,
 	initialize : function(mapping) {
 		Jsonix.Util.Ensure.ensureObject(mapping);
 		Jsonix.Model.SingleTypePropertyInfo.prototype.initialize.apply(this, [ mapping ]);
@@ -3139,6 +3140,12 @@ Jsonix.Model.AttributePropertyInfo = Jsonix.Class(Jsonix.Model.SingleTypePropert
 			this.attributeName = new Jsonix.XML.QName(this.defaultAttributeNamespaceURI, an);
 		} else {
 			this.attributeName = new Jsonix.XML.QName(this.defaultAttributeNamespaceURI, this.name);
+		}
+		// jsonix-CR-009: the schema default, kept for Context.getDefaultValue; unmarshal and marshal never read it.
+		if (Jsonix.Util.Type.exists(mapping.defaultValue)) {
+			this.defaultValue = mapping.defaultValue;
+		} else if (Jsonix.Util.Type.exists(mapping.dv)) {
+			this.defaultValue = mapping.dv;
 		}
 	},
 	unmarshal : function(context, input, scope) {
@@ -6249,6 +6256,36 @@ Jsonix.Context = Jsonix
 			},
 			getTypeInfoByTypeNameKey : function(typeNameKey) {
 				return this.typeNameKeyToTypeInfo[typeNameKey];
+			},
+			// jsonix-CR-009: the schema default of an attribute property, for a reader to supply when the attribute is
+			// absent, as a JAXB getter does. Never written into unmarshalled data or marshalled output.
+			getDefaultValue : function(typeName, propertyName) {
+				Jsonix.Util.Ensure.ensureString(typeName);
+				Jsonix.Util.Ensure.ensureString(propertyName);
+				var typeInfo = this.getTypeInfoByName(typeName);
+				if (!(typeInfo instanceof Jsonix.Model.ClassInfo)) {
+					throw new Error("Type info [" + typeName + "] is not a class info of this context.");
+				}
+				for (; typeInfo instanceof Jsonix.Model.ClassInfo; typeInfo = typeInfo.baseTypeInfo) {
+					if (Object.prototype.hasOwnProperty.call(typeInfo.propertiesMap, propertyName)) {
+						var propertyInfo = typeInfo.propertiesMap[propertyName];
+						return propertyInfo instanceof Jsonix.Model.AttributePropertyInfo ? propertyInfo.defaultValue : undefined;
+					}
+				}
+				return undefined;
+			},
+			// jsonix-CR-009: the value when it exists (the test marshal uses to write it), else the schema default.
+			valueOrDefault : function(object, propertyName, typeName) {
+				Jsonix.Util.Ensure.ensureExists(object);
+				Jsonix.Util.Ensure.ensureObject(object);
+				var name = Jsonix.Util.Type.exists(typeName) ? typeName : object.TYPE_NAME;
+				if (!Jsonix.Util.Type.exists(name)) {
+					throw new Error("The object has no TYPE_NAME and no type name was given.");
+				}
+				// Looked up first, so that an unknown type throws whether or not the value is present.
+				var defaultValue = this.getDefaultValue(name, propertyName);
+				var value = object[propertyName];
+				return Jsonix.Util.Type.exists(value) ? value : defaultValue;
 			},
 			getElementInfo : function(name, scope) {
 				if (Jsonix.Util.Type.exists(scope)) {

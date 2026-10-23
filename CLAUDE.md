@@ -151,6 +151,17 @@ and report nothing, and wildcard DOM content is the source node itself (a docume
 from `unmarshalProperty` / `unmarshalPropertyValue` are rethrown once via `ClassInfo.locateError` with element,
 attribute and line.
 
+**Schema defaults (jsonix-CR-009).** `AttributePropertyInfo` keeps the mapping's `defaultValue` / `dv` (the
+compiler emits it in the runtime's representation). The only readers are `Context.getDefaultValue(typeName,
+propertyName)` and `Context.valueOrDefault(object, propertyName, typeName?)`:
+- `getDefaultValue` walks the base types and returns `undefined` for a non-attribute, undeclared or
+  undefaulted property. It throws for a type that is not a class info.
+- `valueOrDefault` returns the value when it exists, by marshal's own test, and the default otherwise.
+
+Unmarshal and marshal never apply a default, so an absent attribute stays absent. objects' fidelity hashes
+depend on that, and so do consumers that read "absent" as "inherit". Element defaults are not applied (XSD
+gives them to a present, empty element).
+
 **Binding.** `Jsonix.Binding.Marshaller` / `Unmarshaller` are composed from `Marshalls.Element` /
 `Unmarshalls.Element` mixins plus an `AsElementRef` (or `AsSimplifiedElementRef`) mixin that decides how a
 top-level value maps to `{name: QName, value: ...}`. Marshalling writes through `Jsonix.XML.Output` (a DOM

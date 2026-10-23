@@ -1,6 +1,6 @@
 # jsonix-CR-009: Schema defaults on read: the mapping's default for an absent attribute, from the context, never written into the data
 
-**Status:** Proposed 2026-10-24
+**Status:** Implemented 2026-10-24 (section 13)
 **Depends on:** nothing in the runtime; 3.5.0 is the baseline. Consumers reading WordprocessingML through it
 wait for a regeneration of `@docx4j/generated-objects-ts` from `wml.xsd` as docx4j #697 and CR-059 left it
 (both landed 2026-10-24; section 8)
@@ -237,3 +237,37 @@ the modular `AttributePropertyInfo.js` and `Context.js`), and `tests/strict.js` 
 - jsonix-schema-compiler: optionally, JSDoc `@default` on defaulted properties, a type-level map that lets
   `valueOrDefault` narrow, and a customization that removes a default. objects decides whether it wants them.
 - objects: typed helpers over `valueOrDefault`, adopted for WordprocessingML after it regenerates.
+
+## 13. As implemented (2026-10-24)
+
+As specified, in the three copies (`nodejs/scripts/jsonix-factory.js`, `dist/Jsonix-all.js`, the modular
+`Jsonix/Model/AttributePropertyInfo.js` and `Jsonix/Context.js`):
+- `AttributePropertyInfo` gains `defaultValue`, set from the mapping's `defaultValue` when it exists, else
+  `dv`. A falsy default (`false`, `0`, `''`) is kept.
+- `Context` gains `getDefaultValue` and `valueOrDefault`, after `getTypeInfoByTypeNameKey`:
+  - Property lookup uses own keys only, so `toString` is not a property.
+  - `valueOrDefault` also rejects a `null` or missing object (`Jsonix.Util.Ensure.ensureExists`, since
+    `ensureObject` accepts `null`).
+  - It looks the type up before reading the value, so an unknown type throws whether or not the value is
+    present.
+
+The dist and modular copies, loaded as a browser loads them, give the same answers and error messages as
+the npm copy.
+
+`tests/defaults.js` holds 11 tests (46 assertions) covering section 11's cases. A `NaN` default is not among
+them; it is checked against objects below. `usage.ts` gains:
+- a use of each method, one with an explicit type name on a derived context;
+- `@ts-expect-error` for a property `USAddress` does not declare and for a missing property name.
+
+Results:
+- Suite: 1150 assertions. Typecheck, ESM and bundle checks pass. `tests/strict.js` passes over all three copies.
+- Against `@docx4j/generated-objects-ts` at f912b88 (its regeneration from docx4j ac97b56c5), all 104 modules
+  in one context:
+  - Each of its 1,648 attribute defaults reads back identical (`Object.is`), including dml diagram
+    `CTNumericRule`'s three `NaN`s.
+  - `<w:b/>` reads `true`, `<w:i w:val="false"/>` `false`, and `w:style`'s `customStyle` `false` (the
+    compiler CR-007 override).
+  - `w:fldChar`'s `fldLock` and `dirty` read `false`.
+  - `w:lsdException`'s `locked`, `semiHidden`, `unhideWhenUsed` and `qFormat` read `undefined`, left for the
+    consumer to take from `w:latentStyles`.
+  - The nested type name `org_docx4j_wml.Styles.LatentStyles.LsdException` resolves like any other.

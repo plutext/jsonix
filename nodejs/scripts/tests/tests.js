@@ -9,6 +9,7 @@ module.exports =
 		"XML" : require('./xml'),
 		"DOM" : require('./dom'),
 		"Callbacks" : require('./callbacks'),
+		"Defaults" : require('./defaults'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),
