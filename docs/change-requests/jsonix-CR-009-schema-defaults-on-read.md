@@ -2,8 +2,8 @@
 
 **Status:** Proposed 2026-10-24
 **Depends on:** nothing in the runtime; 3.5.0 is the baseline. Consumers reading WordprocessingML through it
-wait for docx4j CR-059 (the audit of `wml.xsd`'s boolean attribute defaults, section 8) and a regeneration of
-`@docx4j/generated-objects-ts`
+wait for a regeneration of `@docx4j/generated-objects-ts` from `wml.xsd` as docx4j #697 and CR-059 left it
+(both landed 2026-10-24; section 8)
 **Requested by:** Jason, 2026-10-24, through `plutext/docx4j-generated-objects-ts` ("in the absence of an actual
 value, jsonix should supply the default"); filed on his instruction the same day, after the recommendation
 recorded in sections 3 and 5
@@ -184,6 +184,21 @@ The order is therefore:
 
 The runtime half can be implemented and released before step 1, because nothing calls it until a consumer
 does. objects should not expose it for WordprocessingML before step 2.
+
+**Step 1 done, 2026-10-24.** docx4j pushed #697 as 77ba784d6, and CR-059's phases 0 and 1 as ac97b56c5 on
+`VERSION_17_3_5`. Word 365 settled the open attributes, and `text/@multiLine` with them (Jason, 2026-10-24):
+- `cols/@equalWidth` is a real `true`. Word lays an absent one out as equal columns, and its own save omits
+  `equalWidth="1"`.
+- `cols/@sep` and `text/@multiLine` are off.
+- `spacing/@beforeAutospacing` and `@afterAutospacing` inherit from the style.
+
+D2 was taken, so `wml.xsd` itself now matches CR-059's Reading column:
+- 30 boolean attributes default to `false` (CR-059's 25 and #697's five).
+- 10 have no default: `lsdException`'s three, `revisionView`'s five and the autospacing pair.
+- Only `equalWidth` and `BooleanDefaultTrue/@val` keep `true` (checked against `wml.xsd` at 46c727bf8).
+
+A mapping regenerated from it gives this CR's reader the right answer for every one of them. No compiler
+customization to remove a default is needed for WordprocessingML. Step 2 is objects'.
 
 ## 9. Compatibility
 
