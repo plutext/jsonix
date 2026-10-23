@@ -1,6 +1,6 @@
 # jsonix-CR-010: An attribute value the type refuses goes to the caller instead of failing the part: per-call `onInvalidValue` (unmarshal) and `onUnprintableValue` (marshal)
 
-**Status:** Implemented 2026-10-24 (section 12); J1 to J3 decided as recommended (Jason, 2026-10-24)
+**Status:** Implemented 2026-10-24 (section 12), version 3.7.0; J1 to J3 decided as recommended (Jason, 2026-10-24)
 **Depends on:** nothing; 3.6.0 is the baseline
 **Requested by:** `plutext/docx4j-core-ts` for its CR-015 (`docs/change-requests/CR-015-run-properties-as-word-reads-them.md`,
 sections 2, 3, 6 and 7, uncommitted on 2026-10-24), after Jason's Word 365 probes of run properties that day,
