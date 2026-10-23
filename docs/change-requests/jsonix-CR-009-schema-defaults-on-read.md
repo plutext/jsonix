@@ -1,6 +1,6 @@
 # jsonix-CR-009: Schema defaults on read: the mapping's default for an absent attribute, from the context, never written into the data
 
-**Status:** Implemented 2026-10-24 (section 13)
+**Status:** Implemented 2026-10-24 (section 13), version 3.6.0
 **Depends on:** nothing in the runtime; 3.5.0 is the baseline. Consumers reading WordprocessingML through it
 wait for a regeneration of `@docx4j/generated-objects-ts` from `wml.xsd` as docx4j #697 and CR-059 left it
 (both landed 2026-10-24; section 8)
