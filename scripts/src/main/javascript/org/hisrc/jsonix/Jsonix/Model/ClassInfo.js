@@ -243,7 +243,17 @@ Jsonix.Model.ClassInfo = Jsonix
 			},
 			unmarshalPropertyValue: function (context, input, propertyInfo, result, value) {
 				try {
-					var propertyValue = propertyInfo.unmarshalValue(value, context, input, this);
+					var propertyValue;
+					try {
+						propertyValue = propertyInfo.unmarshalValue(value, context, input, this);
+					} catch (invalidValueError) {
+						// jsonix-CR-010: an attribute value its type refuses goes to the caller, who returns the value to store,
+						// undefined (or null) to leave the property unset, or throws; unset, the error aborts the unmarshal as before.
+						if (!context.onInvalidValue) {
+							throw invalidValueError;
+						}
+						propertyValue = context.onInvalidValue(value, propertyInfo, this, input.node, invalidValueError);
+					}
 					propertyInfo.setProperty(result, propertyValue);
 				} catch (e) {
 					throw Jsonix.Model.ClassInfo.locateError(e, input, propertyInfo.attributeName || null);

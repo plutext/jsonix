@@ -10,6 +10,7 @@ module.exports =
 		"DOM" : require('./dom'),
 		"Callbacks" : require('./callbacks'),
 		"Defaults" : require('./defaults'),
+		"InvalidValues" : require('./invalidvalues'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

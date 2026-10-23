@@ -2441,7 +2441,17 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 			},
 			unmarshalPropertyValue: function (context, input, propertyInfo, result, value) {
 				try {
-					var propertyValue = propertyInfo.unmarshalValue(value, context, input, this);
+					var propertyValue;
+					try {
+						propertyValue = propertyInfo.unmarshalValue(value, context, input, this);
+					} catch (invalidValueError) {
+						// jsonix-CR-010: an attribute value its type refuses goes to the caller, who returns the value to store,
+						// undefined (or null) to leave the property unset, or throws; unset, the error aborts the unmarshal as before.
+						if (!context.onInvalidValue) {
+							throw invalidValueError;
+						}
+						propertyValue = context.onInvalidValue(value, propertyInfo, this, input.node, invalidValueError);
+					}
 					propertyInfo.setProperty(result, propertyValue);
 				} catch (e) {
 					throw Jsonix.Model.ClassInfo.locateError(e, input, propertyInfo.attributeName || null);
@@ -3048,7 +3058,22 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 		},
 		marshal: function (value, context, output, scope) {
 			if (Jsonix.Util.Type.exists(value)) {
-				output.writeAttribute(this.attributeName, this.print(value, context, output, scope));
+				var text;
+				try {
+					text = this.print(value, context, output, scope);
+				} catch (unprintableValueError) {
+					// jsonix-CR-010: a value its type cannot print goes to the caller, who returns the text to write,
+					// undefined (or null) to omit the attribute, or throws; unset, the error propagates as before.
+					if (!context.onUnprintableValue) {
+						throw unprintableValueError;
+					}
+					text = context.onUnprintableValue(value, this, scope, unprintableValueError);
+					if (!Jsonix.Util.Type.exists(text)) {
+						return;
+					}
+					Jsonix.Util.Ensure.ensureString(text);
+				}
+				output.writeAttribute(this.attributeName, text);
 			}
 
 		},

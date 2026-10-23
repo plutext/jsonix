@@ -1,6 +1,6 @@
 # jsonix-CR-010: An attribute value the type refuses goes to the caller instead of failing the part: per-call `onInvalidValue` (unmarshal) and `onUnprintableValue` (marshal)
 
-**Status:** Proposed 2026-10-24
+**Status:** Implemented 2026-10-24 (section 12); J1 to J3 decided as recommended (Jason, 2026-10-24)
 **Depends on:** nothing; 3.6.0 is the baseline
 **Requested by:** `plutext/docx4j-core-ts` for its CR-015 (`docs/change-requests/CR-015-run-properties-as-word-reads-them.md`,
 sections 2, 3, 6 and 7, uncommitted on 2026-10-24), after Jason's Word 365 probes of run properties that day,
@@ -216,3 +216,51 @@ Plus the typings in `usage.ts`, the three copies, and `tests/strict.js`.
 Downstream:
 - core-ts CR-015 depends on this CR.
 - The objects change that sets the callbacks for WordprocessingML parts depends on it, whichever session files it.
+
+## 12. As implemented (2026-10-24)
+
+Jason decided J1 to J3 as recommended: callbacks, with `onUnprintableValue`, for attribute values only. Patched in the
+three copies (`nodejs/scripts/jsonix-factory.js`, `dist/Jsonix-all.js`, the modular `Jsonix/Model/ClassInfo.js`
+and `Jsonix/Model/AttributePropertyInfo.js`).
+
+**Unmarshal: `ClassInfo.unmarshalPropertyValue`.** The parse sits in an inner `try`.
+- On failure with no `onInvalidValue`, the error is rethrown to the existing `catch`, which locates it as before.
+- With the callback, its result goes through `propertyInfo.setProperty`. So `null`, like `undefined`, leaves the
+  property unset.
+- A throw from the callback is located by the same outer `catch`. Rethrowing `error` gives today's message
+  verbatim (tested).
+
+**Marshal: `AttributePropertyInfo.marshal`.** The print sits in a `try`.
+- `undefined` or `null` from the callback omits the attribute.
+- A non-string throws `Argument [..] must be a string.`
+
+**The class info passed.** On unmarshal it is the class info being read, so an `xsi:type` element's derived type.
+On marshal it is the class info that declares the property: `ClassInfo.marshal` calls the base type's `marshal`
+for inherited properties. Both carry the same `module` for a type and its base in one module, which is the scope a
+facade checks.
+
+**Typings.** `UnmarshalCallbacks.onInvalidValue` and `MarshalCallbacks.onUnprintableValue`, the derived context's
+members, and these declarations, so that TypeScript callers can scope and dispatch:
+- a new `AttributePropertyInfo` interface (`typeInfo`, `attributeName`, `defaultValue`);
+- `ClassInfo.module: { readonly name: string }`;
+- `TypeInfo.CLASS_NAME`.
+
+The built-in boolean has `typeInfo.name === 'Boolean'`, and an enumeration has
+`typeInfo.CLASS_NAME === 'Jsonix.Model.EnumLeafInfo'`. JavaScript callers can also compare against
+`Jsonix.Schema.XSD.Boolean.INSTANCE` and use `instanceof Jsonix.Model.EnumLeafInfo`. `usage.ts` uses both
+callbacks and expects errors for the marshal callback passed to `createUnmarshaller` and for a callback returning a
+number.
+
+**Tests.** `tests/invalidvalues.js` has 15 tests and 44 assertions, covering the cases of section 10 and a Word
+reading surviving a save and a reload. Suite: 1194 assertions. Typecheck, ESM and bundle checks pass, and
+`tests/strict.js` passes over all three copies. The dist and modular copies, loaded as a browser loads them with
+xmldom's parser as globals, give the same errors, readings and output as the npm copy.
+
+**On objects' modules (f912b88).** All 104 modules were loaded into one context, with section 5.3's policy scoped
+to `org_docx4j_wml`. In a `w:r`:
+- `w:b w:val="FALSE"` and `w:i w:val="no"` read `true`.
+- `w:u w:val="Single"`, `w:vertAlign w:val="Superscript"` and `w:em w:val="DOT"` are kept as their strings.
+- The save writes `w:val="true"` for the toggles and the three kept spellings back.
+- Unset, the same run fails as before, on unmarshal and on marshal.
+- `wp:anchor behindDoc="FALSE"` inside a `w:drawing` in the same run still fails, located at
+  `wp:anchor/@behindDoc`: DrawingML in a WordprocessingML part keeps today's strictness.

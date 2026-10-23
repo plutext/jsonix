@@ -131,6 +131,21 @@ const billToCountry: string | undefined = derived.valueOrDefault(po.billTo, 'cou
 context.valueOrDefault(po.shipTo, 'nme');
 // @ts-expect-error the property name is required
 context.getDefaultValue('PO.USAddress');
+// Refused attribute values handed to the caller (jsonix-CR-010).
+const lenient = context.createUnmarshaller({
+  onInvalidValue: (text, propertyInfo, classInfo, node, error) => {
+    if (classInfo.module.name !== 'PO') throw error;
+    if (propertyInfo.typeInfo.name === 'Boolean') return text !== 'false' && text !== 'off' && text !== '0';
+    if (propertyInfo.typeInfo.CLASS_NAME === 'Jsonix.Model.EnumLeafInfo') return text;
+    const where: string = node.nodeName + '/@' + propertyInfo.attributeName.localPart;
+    throw new Error(where + ': ' + error.message);
+  },
+});
+const keeping = context.createMarshaller({ onUnprintableValue: (value, propertyInfo, classInfo, error) => (typeof value === 'string' ? value : undefined) });
+// @ts-expect-error the marshal-side callback is not an unmarshaller option
+context.createUnmarshaller({ onUnprintableValue: () => undefined });
+// @ts-expect-error what is written must be a string
+context.createMarshaller({ onUnprintableValue: () => 42 });
 declare const err: unknown;
 if (err instanceof Error && (err as Partial<Jsonix.LocatedError>).jsonixLocated) {
   const located = err as Jsonix.LocatedError;
@@ -164,6 +179,6 @@ export {
   name, zip, year, comment, typeName, itemParent, addressParent, rootParent, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
   untypedName, untypedValue, fromInterface, mixed, copiedPo, copiedAddress, asParented, runtimeCalendar, runtimeName,
   serialized, fresh, domAvailable, xlinkFix, perDocument, normalized10, normalized11, is11, current,
-  dropped, written, recordedXml, derived, countryDefault, country, billToCountry,
+  dropped, written, recordedXml, derived, countryDefault, country, billToCountry, lenient, keeping,
   out, doc, misspelt, wrongType, incomplete,
 };

@@ -35,7 +35,22 @@ Jsonix.Model.AttributePropertyInfo = Jsonix.Class(Jsonix.Model.SingleTypePropert
 	},
 	marshal : function(value, context, output, scope) {
 		if (Jsonix.Util.Type.exists(value)) {
-			output.writeAttribute(this.attributeName, this.print(value, context, output, scope));
+			var text;
+			try {
+				text = this.print(value, context, output, scope);
+			} catch (unprintableValueError) {
+				// jsonix-CR-010: a value its type cannot print goes to the caller, who returns the text to write,
+				// undefined (or null) to omit the attribute, or throws; unset, the error propagates as before.
+				if (!context.onUnprintableValue) {
+					throw unprintableValueError;
+				}
+				text = context.onUnprintableValue(value, this, scope, unprintableValueError);
+				if (!Jsonix.Util.Type.exists(text)) {
+					return;
+				}
+				Jsonix.Util.Ensure.ensureString(text);
+			}
+			output.writeAttribute(this.attributeName, text);
 		}
 
 	},

@@ -201,6 +201,18 @@ export namespace Jsonix {
      * a copy. If unmarshalling throws, the calls already made stand.
      */
     onElement?(element: Element, value: object): void;
+    /**
+     * An attribute value its type refuses (jsonix-CR-010): a boolean outside `true`, `1`, `on`,
+     * `false`, `0` and `off`, a value outside an enumeration, a number or date that does not parse.
+     * Called only after the parse has failed, with the attribute's text, its property info
+     * (`propertyInfo.typeInfo.name` is `'Boolean'` for the built-in boolean, the qualified name for
+     * an enumeration, whose `CLASS_NAME` is `'Jsonix.Model.EnumLeafInfo'`), the class info being read
+     * (an `xsi:type` element's derived type; `classInfo.module.name` names its module), the owning
+     * element, and the parse error. The returned value is stored unchecked; `undefined` or `null`
+     * leaves the property unset; a throw aborts the unmarshal, located as an unhandled typed-value
+     * error is (rethrow `error` to keep today's behaviour). Attribute values only.
+     */
+    onInvalidValue?(text: string, propertyInfo: AttributePropertyInfo, classInfo: ClassInfo, node: Element, error: Error): unknown;
   }
 
   /** Callbacks a marshaller records what it writes through (jsonix-CR-006). */
@@ -211,6 +223,15 @@ export namespace Jsonix {
      * original node. Elements holding a simple value are not reported (their owner is).
      */
     onElement?(element: Node, value: unknown): void;
+    /**
+     * An attribute value its type cannot print (jsonix-CR-010), such as a string kept by
+     * `onInvalidValue` outside its enumeration, or a non-boolean in a boolean. Called with the
+     * value, the property info, the class info that declares the property, and the print error. A
+     * returned string is written as the attribute's value; `undefined` or `null` omits the
+     * attribute; a throw aborts the marshal, as an unhandled error does. Its name differs from the
+     * unmarshal side's, so one options object can be passed to both factories.
+     */
+    onUnprintableValue?(value: unknown, propertyInfo: AttributePropertyInfo, classInfo: ClassInfo, error: Error): string | null | undefined;
   }
 
   /** Per-call options for `createUnmarshaller`; anything set here overrides the context for that unmarshaller only. */
@@ -307,6 +328,10 @@ export namespace Jsonix {
      * unmarshaller (jsonix-CR-008), whichever the derived context was created for.
      */
     readonly onElement?: MarshalCallbacks['onElement'] | UnmarshalCallbacks['onElement'];
+    /** Set when this is a derived context; read by the unmarshaller (jsonix-CR-010). */
+    readonly onInvalidValue?: UnmarshalCallbacks['onInvalidValue'];
+    /** Set when this is a derived context; read by the marshaller (jsonix-CR-010). */
+    readonly onUnprintableValue?: MarshalCallbacks['onUnprintableValue'];
 
     /**
      * The xsd default of an attribute property (jsonix-CR-009): the mapping's `defaultValue` (or `dv`), which
@@ -403,6 +428,7 @@ export namespace Jsonix {
   }
 
   export interface TypeInfo {
+    CLASS_NAME: string;
     name: string;
     baseTypeInfo: TypeInfo;
   }
@@ -426,6 +452,13 @@ export namespace Jsonix {
     built: boolean;
   }
 
+  export interface AttributePropertyInfo extends PropertyInfo {
+    typeInfo: TypeInfo;
+    attributeName: XML.QName;
+    /** The mapping's `defaultValue` / `dv` (jsonix-CR-009); read through `Context.getDefaultValue`. */
+    defaultValue?: unknown;
+  }
+
   export interface AbstractElementPropertyInfo extends PropertyInfo {
     wrapperElement: XML.QName;
     allowDom: boolean;
@@ -440,6 +473,8 @@ export namespace Jsonix {
 
   export interface ClassInfo extends TypeInfo, Styled {
     CLASS_NAME: string;
+    /** The mapping module that declares this class info. */
+    module: { readonly name: string };
     localName: string;
     typeName: XML.QName;
     instanceFactory: {};
