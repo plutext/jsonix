@@ -210,7 +210,9 @@ export namespace Jsonix {
      * (an `xsi:type` element's derived type; `classInfo.module.name` names its module), the owning
      * element, and the parse error. The returned value is stored unchecked; `undefined` or `null`
      * leaves the property unset; a throw aborts the unmarshal, located as an unhandled typed-value
-     * error is (rethrow `error` to keep today's behaviour). Attribute values only.
+     * error is (rethrow `error` to keep today's behaviour). Attribute values only. The boolean and
+     * enumeration parses compare exactly, with no whitespace collapse or case folding, so every other
+     * spelling (`" false"`, `FALSE`, `Single`) reaches this callback as written (jsonix-CR-010 section 13).
      */
     onInvalidValue?(text: string, propertyInfo: AttributePropertyInfo, classInfo: ClassInfo, node: Element, error: Error): unknown;
   }

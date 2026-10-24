@@ -94,6 +94,16 @@ module.exports = {
 			test.strictEqual(2, u.size, 'the other attributes are read as before');
 			test.done();
 		},
+		"EveryInexactSpellingReachesTheCallback": function (test) {
+			// Section 13: Boolean and enumeration parses compare exactly (no whiteSpace collapse, no case folding), so
+			// the caller sees the raw text of every spelling that is not exact, and decides its reading.
+			var seen = [];
+			var unmarshaller = context.createUnmarshaller({ onInvalidValue: function (text) { seen.push(text); return undefined; } });
+			[' false', 'false ', 'FALSE'].forEach(function (text) { unmarshaller.unmarshalString(rPr('<w:b w:val="' + text + '"/>')); });
+			[' single', 'single ', 'Single'].forEach(function (text) { unmarshaller.unmarshalString(rPr('<w:u w:val="' + text + '"/>')); });
+			test.deepEqual([' false', 'false ', 'FALSE', ' single', 'single ', 'Single'], seen);
+			test.done();
+		},
 		"UndefinedOrNullLeavesThePropertyUnset": function (test) {
 			[undefined, null].forEach(function (returned) {
 				var u = context.createUnmarshaller({ onInvalidValue: function () { return returned; } })

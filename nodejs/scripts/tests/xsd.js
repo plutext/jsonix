@@ -36,6 +36,13 @@ module.exports =
 		['On', 'OFF', ' on', 'yes', 'no', ''].forEach(function (text) {
 			test.throws(function () { Jsonix.Schema.XSD.Boolean.INSTANCE.parse(text); }, Error, 'rejects [' + text + ']');
 		});
+		// jsonix-CR-010 section 13: the comparison is exact, with no whiteSpace collapse (XSD gives xs:boolean
+		// whiteSpace="collapse", so a conforming parser reads " false" as false) and no case folding. Word reads
+		// each of these as on, and an onInvalidValue caller (objects CR-013) reaches that reading only because this
+		// parse refuses them: collapsing or folding here would change Word documents' readings silently.
+		[' false', 'false ', ' 0', '0 ', ' off', 'FALSE', 'False', 'Off', '00'].forEach(function (text) {
+			test.throws(function () { Jsonix.Schema.XSD.Boolean.INSTANCE.parse(text); }, Error, 'refuses [' + text + '] for the caller to read');
+		});
 		test.done();
 	},
 	"List": function(test) {

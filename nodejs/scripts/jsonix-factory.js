@@ -4445,6 +4445,10 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 			// 1st edition's) also admits on and off, which Office reads and third-party writers (pandoc) produce;
 			// docx4j's schemas type it xsd:boolean, so they are accepted here and always printed as true/false
 			// (jsonix-CR-007).
+			// The comparison is exact on purpose: no whiteSpace collapse (XSD gives xs:boolean whiteSpace="collapse",
+			// so a conforming parser reads " false" as false) and no case folding. Word reads " false", "FALSE" and every
+			// other spelling as on, and an onInvalidValue caller (jsonix-CR-010 section 13; objects CR-013) reaches that
+			// reading only because this parse refuses them. Collapsing or folding here would change it silently.
 			if (text === 'true' || text === '1' || text === 'on') {
 				return true;
 			} else if (text === 'false' || text === '0' || text === 'off') {

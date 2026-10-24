@@ -264,3 +264,24 @@ to `org_docx4j_wml`. In a `w:r`:
 - Unset, the same run fails as before, on unmarshal and on marshal.
 - `wp:anchor behindDoc="FALSE"` inside a `w:drawing` in the same run still fails, located at
   `wp:anchor/@behindDoc`: DrawingML in a WordprocessingML part keeps today's strictness.
+
+## 13. The exact comparison is part of the contract (2026-10-24)
+
+`onInvalidValue` sees a value only when the type's parse refuses it. A caller's reading of a refused spelling
+therefore depends on which spellings the parse refuses. objects CR-013 asked for this to be recorded.
+
+- **`Jsonix.Schema.XSD.Boolean.parse`** compares the text exactly with the six spellings: no whiteSpace collapse, no
+  case folding. XSD 1.0 Part 2 gives `xs:boolean` `whiteSpace="collapse"`, so a conforming parser reads `" false"`
+  as false. Word reads `" false"`, `"false "`, `FALSE` and every other spelling as on (core-ts CR-015 section 2).
+  objects' `onInvalidValue` reaches Word's reading only because this parse refuses them.
+- **`Jsonix.Model.EnumLeafInfo.parse`** is exact too (`entries.hasOwnProperty(text)`), so `" single"`, `"single "`
+  and `Single` reach the callback as written.
+
+So collapsing whitespace or folding case in either parse, for conformance or convenience, would silently change
+how a caller relying on CR-010 reads Word documents. That is a change to this contract, to be agreed with objects
+and core-ts first. It is guarded in three places:
+- the comment above the comparison in `Boolean.parse` (all three copies);
+- `tests/xsd.js` `Boolean`, which asserts that `" false"`, `"false "`, `" 0"`, `"0 "`, `" off"`, `FALSE`,
+  `False`, `Off` and `00` are refused;
+- `tests/invalidvalues.js` `EveryInexactSpellingReachesTheCallback`, which asserts the raw text of each of those
+  kinds, boolean and enumeration, reaches `onInvalidValue`.
