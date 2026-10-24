@@ -2031,6 +2031,11 @@ Jsonix.Binding.Marshalls.Element = Jsonix.Class({
 		}
 		var typeInfo = actualTypeInfo || declaredTypeInfo;
 		if (typeInfo) {
+			// jsonix-CR-011: the caller may leave out an element written from a property (scope is its owning class
+			// info; the root, marshalled with no scope, is never offered): no start element, no content, no onElement.
+			if (context.omitElement && Jsonix.Util.Type.exists(scope) && context.omitElement(elementValue.value, elementValue.name, typeInfo, this, scope) === true) {
+				return;
+			}
 			output.writeStartElement(elementValue.name);
 			if (actualTypeInfo && declaredTypeInfo !== actualTypeInfo) {
 				var xsiTypeName = actualTypeInfo.typeName;
@@ -2569,7 +2574,7 @@ Jsonix.Model.ClassInfo = Jsonix
 						var propertyInfo = this.properties[index];
 						var propertyValue = value[propertyInfo.name];
 						if (Jsonix.Util.Type.exists(propertyValue)) {
-							propertyInfo.marshal(propertyValue, context, output, this);
+							propertyInfo.marshal(propertyValue, context, output, this, value);
 						}
 					}
 				}
@@ -3172,11 +3177,13 @@ Jsonix.Model.AttributePropertyInfo = Jsonix.Class(Jsonix.Model.SingleTypePropert
 		}
 		return result;
 	},
-	marshal : function(value, context, output, scope) {
+	marshal : function(value, context, output, scope, owner) {
 		if (Jsonix.Util.Type.exists(value)) {
 			var text;
+			var printed = false;
 			try {
 				text = this.print(value, context, output, scope);
+				printed = true;
 			} catch (unprintableValueError) {
 				// jsonix-CR-010: a value its type cannot print goes to the caller, who returns the text to write,
 				// undefined (or null) to omit the attribute, or throws; unset, the error propagates as before.
@@ -3188,6 +3195,18 @@ Jsonix.Model.AttributePropertyInfo = Jsonix.Class(Jsonix.Model.SingleTypePropert
 					return;
 				}
 				Jsonix.Util.Ensure.ensureString(text);
+			}
+			// jsonix-CR-011: a value that printed goes to the caller with the owning object, who returns the text to
+			// write, null to omit the attribute, or undefined to keep the text; a value that did not print never comes here.
+			if (printed && context.onAttributeValue) {
+				var adaptedText = context.onAttributeValue(value, text, owner, this, scope);
+				if (adaptedText === null) {
+					return;
+				}
+				if (!Jsonix.Util.Type.isUndefined(adaptedText)) {
+					Jsonix.Util.Ensure.ensureString(adaptedText);
+					text = adaptedText;
+				}
 			}
 			output.writeAttribute(this.attributeName, text);
 		}

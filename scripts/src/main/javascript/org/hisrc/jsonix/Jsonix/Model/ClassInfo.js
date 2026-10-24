@@ -278,7 +278,7 @@ Jsonix.Model.ClassInfo = Jsonix
 						var propertyInfo = this.properties[index];
 						var propertyValue = value[propertyInfo.name];
 						if (Jsonix.Util.Type.exists(propertyValue)) {
-							propertyInfo.marshal(propertyValue, context, output, this);
+							propertyInfo.marshal(propertyValue, context, output, this, value);
 						}
 					}
 				}

@@ -16,6 +16,11 @@ Jsonix.Binding.Marshalls.Element = Jsonix.Class({
 		}
 		var typeInfo = actualTypeInfo || declaredTypeInfo;
 		if (typeInfo) {
+			// jsonix-CR-011: the caller may leave out an element written from a property (scope is its owning class
+			// info; the root, marshalled with no scope, is never offered): no start element, no content, no onElement.
+			if (context.omitElement && Jsonix.Util.Type.exists(scope) && context.omitElement(elementValue.value, elementValue.name, typeInfo, this, scope) === true) {
+				return;
+			}
 			output.writeStartElement(elementValue.name);
 			if (actualTypeInfo && declaredTypeInfo !== actualTypeInfo) {
 				var xsiTypeName = actualTypeInfo.typeName;

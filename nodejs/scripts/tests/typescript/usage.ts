@@ -146,6 +146,19 @@ const keeping = context.createMarshaller({ onUnprintableValue: (value, propertyI
 context.createUnmarshaller({ onUnprintableValue: () => undefined });
 // @ts-expect-error what is written must be a string
 context.createMarshaller({ onUnprintableValue: () => 42 });
+// Marshal-side adapters (jsonix-CR-011): rewrite, omit or keep an attribute that printed; leave an element out.
+const normalising = context.createMarshaller({
+  onAttributeValue: (value, text, owner, propertyInfo, classInfo) => {
+    if (classInfo.module.name !== 'PO' || propertyInfo.attributeName.localPart !== 'country') return undefined;
+    return 'country' in owner ? text.toUpperCase() : null;
+  },
+  omitElement: (value, name, typeInfo, propertyInfo, classInfo) =>
+    typeInfo.module?.name === 'PO' && name.localPart === 'comment' && classInfo.name === 'PO.PurchaseOrderType',
+});
+// @ts-expect-error an attribute's text is a string, null or undefined
+context.createMarshaller({ onAttributeValue: () => 42 });
+// @ts-expect-error marshal-side only
+context.createUnmarshaller({ omitElement: () => true });
 declare const err: unknown;
 if (err instanceof Error && (err as Partial<Jsonix.LocatedError>).jsonixLocated) {
   const located = err as Jsonix.LocatedError;
@@ -179,6 +192,6 @@ export {
   name, zip, year, comment, typeName, itemParent, addressParent, rootParent, inferredRoot, inferredName, inferredValue, notNarrowed, inferredEsm,
   untypedName, untypedValue, fromInterface, mixed, copiedPo, copiedAddress, asParented, runtimeCalendar, runtimeName,
   serialized, fresh, domAvailable, xlinkFix, perDocument, normalized10, normalized11, is11, current,
-  dropped, written, recordedXml, derived, countryDefault, country, billToCountry, lenient, keeping,
+  dropped, written, recordedXml, derived, countryDefault, country, billToCountry, lenient, keeping, normalising,
   out, doc, misspelt, wrongType, incomplete,
 };

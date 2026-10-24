@@ -162,6 +162,17 @@ attribute and line.
 Both are per-call options. Unset, the errors are exactly what they were. The runtime holds no Word rules: the
 objects facade scopes its policy by `classInfo.module.name`.
 
+**Marshal-side adapters (jsonix-CR-011).** Two more per-call marshaller options change what is written, never the
+tree:
+- `onAttributeValue(value, text, owner, propertyInfo, classInfo)` is consulted in `AttributePropertyInfo.marshal`
+  after a successful print. `ClassInfo.marshal` passes the owning object as a fifth argument. It returns a string
+  to write, `null` to omit the attribute, or `undefined` to keep `text`. Failed prints go only to
+  `onUnprintableValue`.
+- `omitElement(value, name, typeInfo, propertyInfo, classInfo)` is consulted in `Marshalls.Element.marshalElement`
+  before `writeStartElement`, only when a scope (the owning class info) exists, so never for the root. `true` omits.
+
+Unset, the output is byte-identical, and the cost is not measurable (CR-011 section 10).
+
 **Schema defaults (jsonix-CR-009).** `AttributePropertyInfo` keeps the mapping's `defaultValue` / `dv` (the
 compiler emits it in the runtime's representation). The only readers are `Context.getDefaultValue(typeName,
 propertyName)` and `Context.valueOrDefault(object, propertyName, typeName?)`:

@@ -234,6 +234,24 @@ export namespace Jsonix {
      * unmarshal side's, so one options object can be passed to both factories.
      */
     onUnprintableValue?(value: unknown, propertyInfo: AttributePropertyInfo, classInfo: ClassInfo, error: Error): string | null | undefined;
+    /**
+     * An attribute value that printed (jsonix-CR-011), with `text`, what the runtime would write;
+     * `owner`, the typed object being marshalled, so that sibling properties can be read; the
+     * property info; and the class info that declares the property. A returned string is written;
+     * `null` omits the attribute; `undefined` keeps `text`, so a callback can fall through for the
+     * properties it does not handle. (In `onUnprintableValue` `undefined` omits, since nothing
+     * printed.) A value that failed to print goes to `onUnprintableValue` only. The tree is never
+     * changed.
+     */
+    onAttributeValue?(value: unknown, text: string, owner: object, propertyInfo: AttributePropertyInfo, classInfo: ClassInfo): string | null | undefined;
+    /**
+     * Called before an element is written from a property (jsonix-CR-011), with its value (the
+     * typed object, or the simple value), its name, the type it is about to be marshalled as (after
+     * `xsi:type`), the element, elements, element-ref(s) or `anyElement` property, and the owning
+     * class info. `true` leaves the element out: no start element, no content, no `onElement`
+     * report. Not offered: the root passed to `marshal*`, element maps, wildcard DOM content.
+     */
+    omitElement?(value: unknown, name: XML.QName, typeInfo: TypeInfo, propertyInfo: PropertyInfo, classInfo: ClassInfo): boolean | undefined;
   }
 
   /** Per-call options for `createUnmarshaller`; anything set here overrides the context for that unmarshaller only. */
@@ -334,6 +352,9 @@ export namespace Jsonix {
     readonly onInvalidValue?: UnmarshalCallbacks['onInvalidValue'];
     /** Set when this is a derived context; read by the marshaller (jsonix-CR-010). */
     readonly onUnprintableValue?: MarshalCallbacks['onUnprintableValue'];
+    /** Set when this is a derived context; read by the marshaller (jsonix-CR-011). */
+    readonly onAttributeValue?: MarshalCallbacks['onAttributeValue'];
+    readonly omitElement?: MarshalCallbacks['omitElement'];
 
     /**
      * The xsd default of an attribute property (jsonix-CR-009): the mapping's `defaultValue` (or `dv`), which
@@ -433,6 +454,8 @@ export namespace Jsonix {
     CLASS_NAME: string;
     name: string;
     baseTypeInfo: TypeInfo;
+    /** The mapping module that declares this type info; built-in simple types have none. */
+    module?: { readonly name: string };
   }
 
   export interface EnumLeafInfo extends TypeInfo {

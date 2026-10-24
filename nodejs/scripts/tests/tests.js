@@ -11,6 +11,7 @@ module.exports =
 		"Callbacks" : require('./callbacks'),
 		"Defaults" : require('./defaults'),
 		"InvalidValues" : require('./invalidvalues'),
+		"Adapters" : require('./adapters'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

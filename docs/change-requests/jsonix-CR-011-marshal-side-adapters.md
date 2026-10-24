@@ -1,6 +1,6 @@
 # jsonix-CR-011: Marshal-side adapters: per-call `onAttributeValue` (rewrite or omit an attribute that prints) and `omitElement` (leave an element out)
 
-**Status:** Proposed 2026-10-24
+**Status:** Implemented 2026-10-24 (section 10); K1 to K3 decided as recommended (Jason, 2026-10-24)
 **Depends on:** nothing; 3.7.0 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts` for its CR-013 phase C, at Jason's word ("raise the
 marshal-adapter CR with jsonix-d2"), 2026-10-24. Phase C is the save normaliser behind core-ts CR-015's D2, and it
@@ -186,3 +186,42 @@ Plus the typings in `usage.ts`, the three copies, and `tests/strict.js`.
   omitting as in `onUnprintableValue`.
 
 Downstream: objects-ts/CR-013.C depends on this CR. Phases A and B do not.
+
+## 10. As implemented (2026-10-24)
+
+Jason decided K1 to K3 as recommended: callbacks; `owner` passed; `undefined` keeps and `null` omits. Patched in the
+three copies (`nodejs/scripts/jsonix-factory.js`, `dist/Jsonix-all.js`, and the modular
+`Jsonix/Model/AttributePropertyInfo.js`, `Jsonix/Model/ClassInfo.js` and `Jsonix/Binding/Marshalls.js`):
+- `ClassInfo.marshal`'s property loop passes the object as a fifth argument, and `AttributePropertyInfo.marshal`
+  takes it as `owner`. A `printed` flag confines `onAttributeValue` to values that printed, so a throw from the
+  callback is never mistaken for a print failure and handed to `onUnprintableValue`.
+- In `Marshalls.Element.marshalElement`, `omitElement` is consulted after the type is resolved (so after
+  `xsi:type`) and before `writeStartElement`, only when a `scope` (the owning class info) exists. The marshaller
+  passes none for the root. An unknown element still throws before the callback is reached.
+
+**Typings.** Both callbacks on `MarshalCallbacks` and the derived context, and `TypeInfo.module?`. `usage.ts` uses
+both, and expects errors for a number returned from `onAttributeValue` and for `omitElement` passed to
+`createUnmarshaller`.
+
+**Tests.** `tests/adapters.js` has 12 tests and 33 assertions, covering the cases of section 8. Suite: 1237
+assertions. Typecheck, ESM and bundle checks pass, and `tests/strict.js` passes over all three copies. The dist and
+modular copies, loaded as a browser loads them, give the same output as the npm copy, and leave the tree unchanged.
+
+**Cost.** Marshalling a 50,001-element document seven times, median of seven, Node 18, two rounds. Each of the
+50,000 typed children has two attributes and a simple-valued child element.
+
+| | round 1 | round 2 |
+|---|---|---|
+| 3.7.0 | 243 ms | 249 ms |
+| this CR, unset | 233 ms | 230 ms |
+| this CR, with both callbacks falling through | 236 ms | 234 ms |
+
+There is no difference beyond noise, so the adapter table of section 5 is not needed.
+
+**On objects' modules (f912b88),** all 104 in one context, a phase-C-style policy scoped to `org_docx4j_wml`, over
+a paragraph:
+- The invalid `w:highlight` was offered and left out in all three places it appears: the paragraph mark's `rPr`
+  (`ParaRPr`), the run's `rPr`, and the former `rPr` inside `w:rPrChange` (`CTRPrChange.RPr`).
+- `w:color` `ff0000` was written `FF0000`; inside the change, `00ff00` beside `w:themeColor` was written `00FF00`.
+- `w:u`'s `w:color="red"` was omitted.
+- The tree was unchanged.
