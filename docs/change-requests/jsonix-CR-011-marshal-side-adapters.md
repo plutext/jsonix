@@ -1,6 +1,6 @@
 # jsonix-CR-011: Marshal-side adapters: per-call `onAttributeValue` (rewrite or omit an attribute that prints) and `omitElement` (leave an element out)
 
-**Status:** Implemented 2026-10-24 (section 10); K1 to K3 decided as recommended (Jason, 2026-10-24)
+**Status:** Implemented 2026-10-24 (section 10), version 3.8.0; K1 to K3 decided as recommended (Jason, 2026-10-24)
 **Depends on:** nothing; 3.7.0 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts` for its CR-013 phase C, at Jason's word ("raise the
 marshal-adapter CR with jsonix-d2"), 2026-10-24. Phase C is the save normaliser behind core-ts CR-015's D2, and it
