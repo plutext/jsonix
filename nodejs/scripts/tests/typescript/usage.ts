@@ -159,6 +159,18 @@ const normalising = context.createMarshaller({
 context.createMarshaller({ onAttributeValue: () => 42 });
 // @ts-expect-error marshal-side only
 context.createUnmarshaller({ omitElement: () => true });
+// Strict integer attributes (jsonix-CR-012): the forms only Number() reads reach onInvalidValue; elsewhere, today's reading.
+const strict = context.createUnmarshaller({
+  strictIntegers: true,
+  onInvalidValue: (text, propertyInfo, classInfo, node, error) => {
+    if (classInfo.module.name === 'PO' && propertyInfo.typeInfo.name === 'Integer') return text === '' ? 0 : undefined;
+    if (propertyInfo.typeInfo.parse) return propertyInfo.typeInfo.parse(text);
+    throw error;
+  },
+});
+const strictContext: boolean | undefined = context.deriveContext({ strictIntegers: true }).strictIntegers;
+// @ts-expect-error a boolean, not a string
+context.createUnmarshaller({ strictIntegers: 'yes' });
 declare const err: unknown;
 if (err instanceof Error && (err as Partial<Jsonix.LocatedError>).jsonixLocated) {
   const located = err as Jsonix.LocatedError;

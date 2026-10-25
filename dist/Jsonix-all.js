@@ -3163,6 +3163,16 @@ Jsonix.Model.AttributePropertyInfo = Jsonix.Class(Jsonix.Model.SingleTypePropert
 			this.defaultValue = mapping.dv;
 		}
 	},
+	unmarshalValue : function(value, context, input, scope) {
+		var parsedValue = this.parse(value, context, input, scope);
+		// jsonix-CR-012: with strictIntegers, an integer attribute reads only an optional sign and digits; the other texts
+		// Number() reads ("", " 240 ", "240.", "0x10", "1e3") are refused, so onInvalidValue receives them as written. A text
+		// the parse refuses fails as before. No whitespace collapse: stricter than XSD, deliberately (Word refuses " 240 ").
+		if (context.strictIntegers && this.typeInfo instanceof Jsonix.Schema.XSD.Integer && !/^[+-]?[0-9]+$/.test(value)) {
+			throw new Error('Argument [' + value + '] must be an integer literal: an optional + or - and the digits 0 to 9, with nothing around them.');
+		}
+		return parsedValue;
+	},
 	unmarshal : function(context, input, scope) {
 		var attributeCount = input.getAttributeCount();
 		var result = null;

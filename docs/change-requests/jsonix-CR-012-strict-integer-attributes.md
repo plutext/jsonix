@@ -1,6 +1,6 @@
 # jsonix-CR-012: An opt-in strict integer parse for attribute values (`strictIntegers`): only an optional sign and digits, so `""`, `" 240 "`, `240.`, `0x10` and `1e3` reach `onInvalidValue` as written
 
-**Status:** Proposed 2026-10-26; L1 and L2 for Jason
+**Status:** Implemented 2026-10-26 (section 10); L1 and L2 decided as recommended (Jason, 2026-10-26)
 **Depends on:** nothing; 3.8.0 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts` for its CR-015 phase 2. Jason decided objects' N8 (b), which is
 this CR, on 2026-10-26 ("implement CR-015 as recommended"). The evidence is docx4j CR-065 phase 0, the shared Word
@@ -180,7 +180,8 @@ No generated `.d.ts` changes, since the data representation is unchanged. CLAUDE
 These go in a new suite, `tests/strictintegers.js`, registered after `Adapters`, with one mapping holding an attribute of
 each of the thirteen integer types:
 - **Off by default:** every form in section 1's table reads as today, and `onInvalidValue` is not called.
-- **On, accepted:** `0`, `240`, `+240`, `-240`, `007` and `-0`, in range for each type, read as today.
+- **On, accepted:** `0`, `240`, `+240`, `-240`, `007` and `-0` read as today for each type (ranges are not checked, on
+  or off).
 - **On, refused to `onInvalidValue` with the text as written,** for each of the thirteen types: `""`, `" "`, `" 240 "`,
   `"\t240"`, `"240\n"`, `240.`, `10206.0`, `0x10`, `0b1`, `0o7`, `1e3` and `1.5e2`.
 - **On, already refused:** `1.5`, `.5`, `abc`, `240,5` and `Infinity` reach the callback with today's error message.
@@ -196,9 +197,49 @@ each of the thirteen integer types:
 
 ## 9. Decisions (for Jason)
 
+Decided as recommended (Jason, 2026-10-26: "L1 and L2 as recommended; please implement CR-012").
+
+
 - **L1. Scope:** attribute values only (recommended), where `onInvalidValue` can receive a refusal; or every integer
   parse, including element content, simple content and list items, where a refusal aborts the part (section 5). Word's
   own mappings have no integer element content.
 - **L2. Name and shape:** a per-call boolean, `strictIntegers` (recommended), as objects proposed. It sits beside
   `onInvalidValue`, which is also attribute-only by its documentation, not its name. The alternative is
   `strictIntegerAttributes`, which says its scope in the name.
+
+## 10. As implemented (2026-10-26)
+
+Jason decided L1 and L2 as recommended: attribute values only, and the per-call boolean `strictIntegers`. Patched in
+the three copies (`nodejs/scripts/jsonix-factory.js`, `dist/Jsonix-all.js` and the modular
+`Jsonix/Model/AttributePropertyInfo.js`). `AttributePropertyInfo` now has its own `unmarshalValue`, as sketched in
+section 4.2:
+- the lenient parse runs first, so a text it refuses keeps today's error;
+- then, when `context.strictIntegers` is set and the type info is an `Integer`, the text must match `/^[+-]?[0-9]+$/`.
+
+`ClassInfo.unmarshalPropertyValue` and `AttributePropertyInfo.unmarshal` both reach it, and nothing else changed.
+
+**Typings.**
+- `UnmarshallerOptions.strictIntegers?` and the derived context's `strictIntegers?`.
+- `TypeInfo.parse?`, documented as the lenient parse.
+- A note in `onInvalidValue`'s documentation.
+- `usage.ts` sets the option, calls `propertyInfo.typeInfo.parse` from the callback, and expects an error for a string
+  in place of the boolean.
+
+**Tests.** `tests/strictintegers.js` has 9 tests and 2,102 assertions, the cases of section 8 over all thirteen types.
+- The accepted forms include `127` and `9007199254740991`.
+- Tab and newline are written as character references, since XML turns literal ones in an attribute into spaces.
+- With the check disabled, the three tests that depend on it fail and the rest pass.
+
+Suite: 3,339 assertions. Typecheck, ESM and bundle checks pass. The dist and modular copies, loaded as a browser loads
+them, give the npm copy's results for 45 attribute cases and a marshal.
+
+**Cost.** Unmarshalling a 50,001-element document with 100,000 integer attributes, median of seven, Node 18, four
+rounds alternating the order:
+
+| | rounds 1 to 4 |
+|---|---|
+| 3.8.0 | 39, 42, 43, 41 ms |
+| unset | 41, 41, 44, 45 ms |
+| `strictIntegers` | 46, 44, 44, 48 ms |
+
+Unset, the difference is within noise. On, the check costs about 40 ns per integer attribute.

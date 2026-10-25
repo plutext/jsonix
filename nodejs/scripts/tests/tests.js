@@ -12,6 +12,7 @@ module.exports =
 		"Defaults" : require('./defaults'),
 		"InvalidValues" : require('./invalidvalues'),
 		"Adapters" : require('./adapters'),
+		"StrictIntegers" : require('./strictintegers'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

@@ -213,6 +213,8 @@ export namespace Jsonix {
      * error is (rethrow `error` to keep today's behaviour). Attribute values only. The boolean and
      * enumeration parses compare exactly, with no whitespace collapse or case folding, so every other
      * spelling (`" false"`, `FALSE`, `Single`) reaches this callback as written (jsonix-CR-010 section 13).
+     * The integer parse is lenient (`Number()`) unless `strictIntegers` is set. To keep the runtime's own
+     * reading for some values, call `propertyInfo.typeInfo.parse(text)` and rethrow what it throws.
      */
     onInvalidValue?(text: string, propertyInfo: AttributePropertyInfo, classInfo: ClassInfo, node: Element, error: Error): unknown;
   }
@@ -258,6 +260,16 @@ export namespace Jsonix {
   export interface UnmarshallerOptions extends UnmarshalCallbacks {
     parentPointers?: boolean;
     supportXsiType?: boolean;
+    /**
+     * An attribute of `Integer` or one of its twelve restrictions (`Long`, `Int`, `UnsignedLong`, ...)
+     * reads only an optional `+` or `-` and the digits 0 to 9 (jsonix-CR-012). Every other text the
+     * lenient parse reads (`""`, `" 240 "`, `240.`, `10206.0`, `0x10`, `1e3`) is refused, so it reaches
+     * `onInvalidValue` as written, or fails located when that is unset. No whitespace is collapsed:
+     * stricter than XSD, deliberately. A text the lenient parse refuses (`1.5`, `abc`) fails with the
+     * same error as without the option. Attribute values only; element content, list items and printing
+     * are unchanged. Defaults to false.
+     */
+    strictIntegers?: boolean;
   }
 
   /** Per-call options for `createMarshaller`; anything set here overrides the context for that marshaller only. */
@@ -350,6 +362,8 @@ export namespace Jsonix {
     readonly onElement?: MarshalCallbacks['onElement'] | UnmarshalCallbacks['onElement'];
     /** Set when this is a derived context; read by the unmarshaller (jsonix-CR-010). */
     readonly onInvalidValue?: UnmarshalCallbacks['onInvalidValue'];
+    /** Set when this is a derived context; read by the unmarshaller (jsonix-CR-012). */
+    readonly strictIntegers?: boolean;
     /** Set when this is a derived context; read by the marshaller (jsonix-CR-010). */
     readonly onUnprintableValue?: MarshalCallbacks['onUnprintableValue'];
     /** Set when this is a derived context; read by the marshaller (jsonix-CR-011). */
@@ -456,6 +470,12 @@ export namespace Jsonix {
     baseTypeInfo: TypeInfo;
     /** The mapping module that declares this type info; built-in simple types have none. */
     module?: { readonly name: string };
+    /**
+     * Reads a text as this type: the built-in simple types and enumerations have it, class infos do not.
+     * Throws for a text the type refuses. It is the lenient parse even under `strictIntegers` (jsonix-CR-012),
+     * so an `onInvalidValue` callback can read a refused value as the runtime would without the option.
+     */
+    parse?(text: string, context?: unknown, input?: unknown, scope?: unknown): unknown;
   }
 
   export interface EnumLeafInfo extends TypeInfo {

@@ -71,6 +71,7 @@ typings but hard-code the runtime's data representation. The contract, guarded b
 | `XmlDuration` fields `sign`, `years`, `months`, `days`, `hours`, `minutes`, `seconds` | `Jsonix.Schema.XSD.Duration` |
 | `onUnexpectedAttribute` fires for every attribute the class info does not declare, except namespace declarations and (with `supportXsiType`) `xsi:type`, and never for a class with an `anyAttribute`; `onUnexpectedElement` fires at the element skip and never for a class with an `any` wildcard | `ClassInfo.unmarshal` (jsonix-CR-006). objects-ts's fidelity test and core-ts's `validateXml` conclude things from these exact conditions: a report that is absent looks like nothing dropped, so changing them is a change to what two repositories' tests can prove. The attribute report sits inside the `structure.attributes` guard, which is redundant (`attributes: {}` is set unconditionally when the structure is built), so it cannot suppress a report. An attributes-only class meeting an unexpected child does not report it but throws, located by the enclosing property read (`w:bogus (line 1): Illegal state: must be END_ELEMENT.`); unlocated only at the document root. A typed-value error aborts the unmarshal, so a caller's list is complete for drops and first-only for type errors, unless `onInvalidValue` (jsonix-CR-010) is set, when the callback decides what the refused attribute value becomes |
 | `onInvalidValue` sees every attribute spelling that is not exactly one the type accepts | `Boolean.parse` and `EnumLeafInfo.parse` compare exactly: no whiteSpace collapse (although XSD gives xs:boolean `whiteSpace="collapse"`) and no case folding. objects CR-013 derives Word's reading of `" false"` or `FALSE` (on) from the refused raw text, so collapsing or folding would change Word documents' readings silently (jsonix-CR-010 section 13; guarded by `tests/xsd.js` and `tests/invalidvalues.js`) |
+| With `strictIntegers`, `onInvalidValue` sees every integer attribute text outside `[+-]?[0-9]+`, as written | `AttributePropertyInfo.unmarshalValue` checks the text after the lenient parse has read it, for `Integer` and its twelve restrictions only: no whitespace collapse (stricter than XSD, deliberately), and a text the lenient parse refuses keeps today's error. objects CR-015 reads Word's forms (`""` as 0, `240.` truncated) from the refused text and drops the rest, so accepting more here would read documents Word refuses (jsonix-CR-012; guarded by `tests/strictintegers.js`) |
 | XML 1.0 text keeps raw U+0085 and U+2028 | `Jsonix.DOM.parse` passes xmldom a `normalizeLineEndings` for the document's XML version (jsonix-CR-004); xmldom's default applies the 1.1 rule to everything |
 | `readonly PARENT?: <union of containers>` on class interfaces only | set by `ClassInfo.unmarshal` from a result stack on the `Input` when `context.parentPointers` is on; non-enumerable; never on wrappers, maps, calendars, QNames, DOM nodes |
 
@@ -172,6 +173,15 @@ tree:
   before `writeStartElement`, only when a scope (the owning class info) exists, so never for the root. `true` omits.
 
 Unset, the output is byte-identical, and the cost is not measurable (CR-011 section 10).
+
+**Strict integer attributes (jsonix-CR-012).** The per-call unmarshaller option `strictIntegers` makes an attribute of
+`Integer` or one of its twelve restrictions read only `/^[+-]?[0-9]+$/`:
+- The check sits in `AttributePropertyInfo.unmarshalValue`, after the lenient `Number()` parse has read the text, so a
+  text that parse refuses (`1.5`, `abc`) keeps today's error. Every other refusal (`""`, `" 240 "`, `240.`, `0x10`,
+  `1e3`) goes to `onInvalidValue` as written, or fails located.
+- Element content, simple content, list items, enumerations, `Decimal`/`Double`, ranges and printing are unchanged.
+- `TypeInfo.parse` stays lenient, so a callback reads a refused value as the runtime would without the option by calling
+  `propertyInfo.typeInfo.parse(text)`.
 
 **Schema defaults (jsonix-CR-009).** `AttributePropertyInfo` keeps the mapping's `defaultValue` / `dv` (the
 compiler emits it in the runtime's representation). The only readers are `Context.getDefaultValue(typeName,
