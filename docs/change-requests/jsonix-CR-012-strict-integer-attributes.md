@@ -1,6 +1,6 @@
 # jsonix-CR-012: An opt-in strict integer parse for attribute values (`strictIntegers`): only an optional sign and digits, so `""`, `" 240 "`, `240.`, `0x10` and `1e3` reach `onInvalidValue` as written
 
-**Status:** Implemented 2026-10-26 (section 10); L1 and L2 decided as recommended (Jason, 2026-10-26)
+**Status:** Implemented 2026-10-26 (section 10), version 3.9.0; L1 and L2 decided as recommended (Jason, 2026-10-26)
 **Depends on:** nothing; 3.8.0 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts` for its CR-015 phase 2. Jason decided objects' N8 (b), which is
 this CR, on 2026-10-26 ("implement CR-015 as recommended"). The evidence is docx4j CR-065 phase 0, the shared Word
