@@ -123,6 +123,19 @@ context.createUnmarshaller({ onElement: (el, value) => void sources.set(value, e
 context.createUnmarshaller({ onElement: (el: Element, value: object, classInfo: Jsonix.ClassInfo) => undefined });
 // @ts-expect-error unknown option
 context.createMarshaller({ onUnexpectedElement: () => undefined });
+// Dropped character data (jsonix-CR-013): the text, the text or CDATA node itself, the containing class info.
+const droppedText = new Map<Node | null, string[]>();
+context.createUnmarshaller({
+  onUnexpectedText: (text, node, classInfo) => {
+    const texts = droppedText.get(node.parentNode) || [];
+    texts.push(text + ' in ' + classInfo.name);
+    droppedText.set(node.parentNode, texts);
+  },
+});
+// @ts-expect-error the text is a string, not a QName
+context.createUnmarshaller({ onUnexpectedText: (text: Jsonix.XML.QName) => undefined });
+// @ts-expect-error unmarshal-side only
+context.createMarshaller({ onUnexpectedText: () => undefined });
 // Schema defaults on read (jsonix-CR-009): the object is unchanged, the default comes from the context.
 const countryDefault: unknown = context.getDefaultValue('PO.USAddress', 'country');
 const country: string | undefined = context.valueOrDefault(po.shipTo, 'country');

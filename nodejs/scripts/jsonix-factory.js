@@ -2407,9 +2407,16 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 								var mixedPropertyInfo = this.structure.mixed;
 								this.unmarshalProperty(context, input,
 									mixedPropertyInfo, result);
+							} else if (context.onUnexpectedText) {
+								// jsonix-CR-013: no mixed property, so the text is dropped; report it if asked.
+								this.reportUnexpectedText(context, input);
 							}
 						} else if (et === Jsonix.XML.Input.SPACE || et === Jsonix.XML.Input.COMMENT || et === Jsonix.XML.Input.PROCESSING_INSTRUCTION) {
-							// Ignore
+							// Ignore. The input's space is wider than XML's (StringUtils.isEmpty counts U+00A0 among 26 characters),
+							// so jsonix-CR-013 tests the text.
+							if (et === Jsonix.XML.Input.SPACE && context.onUnexpectedText) {
+								this.reportUnexpectedText(context, input);
+							}
 						} else {
 							throw new Error("Illegal state: unexpected event type [" + et + "].");
 						}
@@ -2419,6 +2426,17 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 					var valuePropertyInfo = this.structure.value;
 					this.unmarshalProperty(context, input, valuePropertyInfo,
 						result);
+				} else if (context.onUnexpectedText) {
+					// jsonix-CR-013: skip as nextTag does, reporting the text it skips.
+					var skippedEventType = input.next();
+					while (skippedEventType !== Jsonix.XML.Input.START_ELEMENT && skippedEventType !== Jsonix.XML.Input.END_ELEMENT) {
+						if (skippedEventType === Jsonix.XML.Input.CHARACTERS || skippedEventType === Jsonix.XML.Input.CDATA || skippedEventType === Jsonix.XML.Input.SPACE) {
+							this.reportUnexpectedText(context, input);
+						} else if (skippedEventType !== Jsonix.XML.Input.COMMENT && skippedEventType !== Jsonix.XML.Input.PROCESSING_INSTRUCTION && skippedEventType !== Jsonix.XML.Input.START_DOCUMENT) {
+							throw new Error('Expected start or end tag.');
+						}
+						skippedEventType = input.next();
+					}
 				} else {
 					// Just skip everything
 					input.nextTag();
@@ -2435,6 +2453,14 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 					context.onElement(sourceElement, result);
 				}
 				return result;
+			},
+			// jsonix-CR-013: a dropped text or CDATA node is reported when it holds a character other than XML whitespace
+			// (#x20, #x9, #xD, #xA), however the input classed it; the data stays dropped.
+			reportUnexpectedText: function (context, input) {
+				var text = input.getText();
+				if (Jsonix.Util.Type.isString(text) && /[^\x20\x09\x0D\x0A]/.test(text)) {
+					context.onUnexpectedText(text, input.node, this);
+				}
 			},
 			unmarshalProperty: function (context, input, propertyInfo, result) {
 				try {

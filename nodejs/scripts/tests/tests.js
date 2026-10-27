@@ -13,6 +13,7 @@ module.exports =
 		"InvalidValues" : require('./invalidvalues'),
 		"Adapters" : require('./adapters'),
 		"StrictIntegers" : require('./strictintegers'),
+		"UnexpectedText" : require('./unexpectedtext'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

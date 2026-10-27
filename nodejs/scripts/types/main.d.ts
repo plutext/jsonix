@@ -176,7 +176,7 @@ export namespace Jsonix {
   /**
    * Callbacks an unmarshaller reports dropped content through (jsonix-CR-006). Lax reading is the
    * default and stays so: these only tell you what it dropped. Not a validator: a class with an
-   * `any` or `anyAttribute` wildcard keeps unknown content and reports nothing.
+   * `any` or `anyAttribute` wildcard keeps unknown elements or attributes and reports none.
    */
   export interface UnmarshalCallbacks {
     /**
@@ -190,6 +190,19 @@ export namespace Jsonix {
      * is on, `xsi:type` are never reported.
      */
     onUnexpectedAttribute?(name: XML.QName, node: Node, classInfo: ClassInfo): void;
+    /**
+     * Character data that is dropped (jsonix-CR-013): text or CDATA in an element whose class has no
+     * mixed property or no content at all, and, in any class, text the runtime classes as space
+     * although it holds a character XML does not (U+00A0, U+3000, ...). Called once per text or CDATA
+     * node holding a character other than XML whitespace (`#x20`, `#x9`, `#xD`, `#xA`), so
+     * whitespace-only text is never reported, and a comment splits a text into two calls. `text` is
+     * the node's text as parsed, untrimmed; `node` is the text or CDATA node itself (its `parentNode`
+     * is the containing element; in Node it carries `lineNumber` and `columnNumber`); `classInfo` is
+     * the containing element's. The text stays dropped. Calls come in document order with
+     * `onUnexpectedElement`'s, before the containing element's `onElement`; text inside an element
+     * reported by `onUnexpectedElement` is not reported.
+     */
+    onUnexpectedText?(text: string, node: Node, classInfo: ClassInfo): void;
     /**
      * Called once for every element read as a typed object (jsonix-CR-008), with the source
      * element and the object, once the object is complete: its attributes and content are read and
@@ -355,6 +368,8 @@ export namespace Jsonix {
     /** Set when this is a derived context (see `deriveContext`); read by the unmarshaller. */
     readonly onUnexpectedElement?: UnmarshalCallbacks['onUnexpectedElement'];
     readonly onUnexpectedAttribute?: UnmarshalCallbacks['onUnexpectedAttribute'];
+    /** Set when this is a derived context; read by the unmarshaller (jsonix-CR-013). */
+    readonly onUnexpectedText?: UnmarshalCallbacks['onUnexpectedText'];
     /**
      * Set when this is a derived context; read by the marshaller (jsonix-CR-006) or the
      * unmarshaller (jsonix-CR-008), whichever the derived context was created for.

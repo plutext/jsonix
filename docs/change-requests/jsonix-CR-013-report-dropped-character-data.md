@@ -1,6 +1,6 @@
 # jsonix-CR-013: Report the character data unmarshalling drops: an `onUnexpectedText(text, node, classInfo)` beside `onUnexpectedElement` and `onUnexpectedAttribute`
 
-**Status:** Proposed 2026-10-28; T1 to T3 for Jason
+**Status:** Implemented 2026-10-28 (section 8); T1 to T3 decided as recommended (Jason, 2026-10-28)
 **Depends on:** nothing; 3.9.0 is the baseline
 **Requested by:** `plutext/docx4j-core-ts` for its CR-016 D6, through `plutext/docx4j-generated-objects-ts` CR-017
 section 4.2 (its `'#text'` read report). Jason asked for it to be raised on 2026-10-28. The evidence is check 72's file
@@ -176,6 +176,9 @@ content and simple values read (section 6).
 
 ## 5. Decisions for Jason
 
+Decided as recommended (Jason, 2026-10-28: "T1 to T3 as recommended, implement it"). objects' reply the same day
+confirmed T1 and T3 against its use and left T2 neutral, since none of its containers is mixed.
+
 - **T1. What counts as whitespace.** I recommend XML's four characters. A no-break space or U+3000 alone in a run is
   then reported: it is content that is dropped, and XSD does not allow it in element-only content
   (`cvc-complex-type.2.3`). The alternative is the runtime's 26. That is simpler, at site A only, but it leaves those
@@ -228,3 +231,66 @@ content and simple values read (section 6).
 - **Downstream check.** Before release, objects runs the option over its Office corpus. A count other than zero there
   would be news.
 - **Version.** Release as 3.10.0, a minor version for a new option.
+
+## 8. As implemented (2026-10-28)
+
+Patched in the three copies (`nodejs/scripts/jsonix-factory.js`, `dist/Jsonix-all.js` and the modular
+`Jsonix/Model/ClassInfo.js`), as sketched in section 4.6. `ClassInfo.reportUnexpectedText(context, input)` holds the
+test, and `ClassInfo.unmarshal` calls it at the three sites:
+- **A.** The text branch, when there is no mixed property.
+- **B.** The space branch. Comments and processing instructions go through the same branch and are never reported.
+- **C.** A loop that replaces `input.nextTag()` only when the option is set. It skips the same events and throws the
+  same `Expected start or end tag.` for anything else, so the error after it (`Illegal state: must be END_ELEMENT.`)
+  is unchanged.
+
+`Jsonix.XML.Input` and `StringUtils` are unchanged.
+
+**Typings.**
+- `UnmarshalCallbacks.onUnexpectedText?` and the derived context's `onUnexpectedText?`.
+- `UnmarshalCallbacks` now says that a wildcard keeps unknown elements or attributes, not content: a non-mixed `any`
+  keeps no text, and that text is reported.
+- `usage.ts` groups calls by `node.parentNode`, as objects will. It expects an error for a `QName` as the text, and
+  for the option on a marshaller.
+
+**Tests.** `tests/unexpectedtext.js` has 16 tests and 50 assertions. They cover:
+- sites A, B and C;
+- CDATA, and whitespace-only CDATA;
+- one call per node around a comment and a processing instruction;
+- entities resolved and line ends normalised;
+- U+00A0, U+3000 and U+2009;
+- raw U+0085 and U+2028, reported under XML 1.0 and not under 1.1, where they become line feeds;
+- an `xsi:type` element, and the root;
+- a non-mixed and a mixed `any`;
+- a mixed class: text kept, a no-break space reported, a space dropped unreported;
+- simple content;
+- order against `onUnexpectedElement` and `onElement`;
+- a throwing callback (`#text (line 2): ...`; unlocated at the root);
+- unset, with results identical, the return value ignored, and the shared context unwritten.
+
+Against 3.9.0's factory, every test fails except the three that expect no report.
+
+Suite: 3,389 assertions. Typecheck, ESM and bundle checks pass.
+
+**The three copies agree.** The dist and modular copies, loaded as a browser loads them, give the npm copy's calls,
+results and errors for eight inputs, with the option set and unset. All three read one shared parse: the global
+`DOMParser` those copies use in the sandbox is xmldom's without jsonix-CR-004's XML 1.0 option, so it turns a raw U+0085
+into a line feed before the unmarshaller sees it. That is a property of the parse, not of this CR.
+
+**Cost.** Unmarshalling a pre-parsed, pretty-printed body of 3,000 paragraphs and 15,000 runs (3.5 MB). Each run had
+`w:b`, `w:i`, `w:sz`, `w:t` and `w:lastRenderedPageBreak`, so sites B and C are exercised throughout. The context used
+objects' 104 modules. Each figure is the median of 20 rounds after 5 warm-up rounds, Node 18, with one configuration
+per process and four rounds alternating:
+
+| | rounds 1 to 4 |
+|---|---|
+| 3.9.0 | 270, 265, 264, 262 ms |
+| unset | 268, 264, 268, 270 ms |
+| `onUnexpectedText` set | 276, 266, 268, 273 ms |
+
+Unset, the difference is within noise. Set, it costs about 2%, almost all of it the whitespace test on each
+indentation node. The option reported nothing on this document. Both runtimes measured in one process showed
+the change about 11% slower unset. That was an artefact of the two loading together, and it went away when each ran
+alone.
+
+**Downstream check.** objects offered to run the option over its 341 fidelity parts, on both the unresolved and the
+resolved `mc` checks, before release. The count expected is 0.
