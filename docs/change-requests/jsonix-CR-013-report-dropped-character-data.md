@@ -1,6 +1,6 @@
 # jsonix-CR-013: Report the character data unmarshalling drops: an `onUnexpectedText(text, node, classInfo)` beside `onUnexpectedElement` and `onUnexpectedAttribute`
 
-**Status:** Implemented 2026-10-28 (section 8); T1 to T3 decided as recommended (Jason, 2026-10-28)
+**Status:** Implemented 2026-10-28 (section 8), version 3.10.0; T1 to T3 decided as recommended (Jason, 2026-10-28)
 **Depends on:** nothing; 3.9.0 is the baseline
 **Requested by:** `plutext/docx4j-core-ts` for its CR-016 D6, through `plutext/docx4j-generated-objects-ts` CR-017
 section 4.2 (its `'#text'` read report). Jason asked for it to be raised on 2026-10-28. The evidence is check 72's file
@@ -292,5 +292,10 @@ indentation node. The option reported nothing on this document. Both runtimes me
 the change about 11% slower unset. That was an artefact of the two loading together, and it went away when each ran
 alone.
 
-**Downstream check.** objects offered to run the option over its 341 fidelity parts, on both the unresolved and the
-resolved `mc` checks, before release. The count expected is 0.
+**Downstream check.** objects ran c259464 over its fidelity corpus in a scratch copy of objects a7ca895:
+- **A positive control** first: a string inside a run gave exactly one call, `MISPLACED` in `org_docx4j_wml.R`, and
+  none for the indentation.
+- **With the option set,** 359 checks (the 341 parts as written, plus 18 with their `mc:Choice` resolved) gave 0
+  reports, and the fidelity test passed.
+- **With it unset,** all 342 re-marshalled parts were byte-identical to 3.9.0's.
+- **objects' other suites** (smoke, `word365`, `word365-integers` and `word365-ranges`) passed.
