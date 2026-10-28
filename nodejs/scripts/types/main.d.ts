@@ -230,6 +230,18 @@ export namespace Jsonix {
      * reading for some values, call `propertyInfo.typeInfo.parse(text)` and rethrow what it throws.
      */
     onInvalidValue?(text: string, propertyInfo: AttributePropertyInfo, classInfo: ClassInfo, node: Element, error: Error): unknown;
+    /**
+     * Declares the type of an element a wildcard (`anyElement` property) holds (jsonix-CR-014), asked at the
+     * element's start, before its attributes and content are read, with its name, its parent (the element the
+     * wildcard's class is reading), the wildcard property, that class info, and the element itself. A returned
+     * type info (`context.getTypeInfoByName(...)`, or a built-in such as `Jsonix.Schema.XSD.String.INSTANCE`)
+     * is the element's declared type, so it decides the class and every list below, and types an element the
+     * context does not declare; `undefined` or `null` keeps the lookup by name (the class's scope, then global);
+     * anything else throws. Not asked when `supportXsiType` is on and the element's `xsi:type` names a known
+     * type, which comes first, nor for a DOM-only wildcard. Arguments as the marshal side's but the last, so one
+     * function deciding by name and ancestry serves both factories. A throw is located by the element.
+     */
+    wildcardTypeInfo?(name: XML.QName, parent: Element, propertyInfo: PropertyInfo, classInfo: ClassInfo, element: Element): TypeInfo | null | undefined;
   }
 
   /** Callbacks a marshaller records what it writes through (jsonix-CR-006). */
@@ -267,6 +279,16 @@ export namespace Jsonix {
      * report. Not offered: the root passed to `marshal*`, element maps, wildcard DOM content.
      */
     omitElement?(value: unknown, name: XML.QName, typeInfo: TypeInfo, propertyInfo: PropertyInfo, classInfo: ClassInfo): boolean | undefined;
+    /**
+     * Declares the type of an element a wildcard (`anyElement` property) holds (jsonix-CR-014), asked for each
+     * typed value before `omitElement` and before the element is written, with its name, its parent (the open
+     * element the wildcard's class is writing, ancestors in place), the wildcard property, that class info, and
+     * the value. A returned type info is the declared type: with `supportXsiType` on, `xsi:type` is written only
+     * where the value's class differs from it (by identity, so answer with this context's type info); with it
+     * off, the value is marshalled by it. `undefined` or `null` keeps the lookup by name; anything else throws.
+     * Not asked for strings in a mixed wildcard or DOM content.
+     */
+    wildcardTypeInfo?(name: XML.QName, parent: Element, propertyInfo: PropertyInfo, classInfo: ClassInfo, value: unknown): TypeInfo | null | undefined;
   }
 
   /** Per-call options for `createUnmarshaller`; anything set here overrides the context for that unmarshaller only. */
@@ -384,6 +406,11 @@ export namespace Jsonix {
     /** Set when this is a derived context; read by the marshaller (jsonix-CR-011). */
     readonly onAttributeValue?: MarshalCallbacks['onAttributeValue'];
     readonly omitElement?: MarshalCallbacks['omitElement'];
+    /**
+     * Set when this is a derived context; read by the marshaller or the unmarshaller (jsonix-CR-014), whichever the
+     * derived context was created for.
+     */
+    readonly wildcardTypeInfo?: MarshalCallbacks['wildcardTypeInfo'] | UnmarshalCallbacks['wildcardTypeInfo'];
 
     /**
      * The xsd default of an attribute property (jsonix-CR-009): the mapping's `defaultValue` (or `dv`), which

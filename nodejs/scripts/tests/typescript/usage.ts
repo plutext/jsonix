@@ -172,6 +172,16 @@ const normalising = context.createMarshaller({
 context.createMarshaller({ onAttributeValue: () => 42 });
 // @ts-expect-error marshal-side only
 context.createUnmarshaller({ omitElement: () => true });
+// The type of an element a wildcard holds (jsonix-CR-014): one function, deciding by name and parent, for both factories.
+const byLevel = {
+  wildcardTypeInfo: (name: Jsonix.XML.QName, parent: Element, propertyInfo: Jsonix.PropertyInfo, classInfo: Jsonix.ClassInfo, elementOrValue: unknown) =>
+    name.localPart === 'comment' && parent.localName === 'item' && classInfo.module.name === 'PO' ? context.getTypeInfoByName('String') : undefined,
+};
+context.createUnmarshaller(byLevel);
+context.createMarshaller(byLevel);
+context.createUnmarshaller({ wildcardTypeInfo: (name, parent, propertyInfo, classInfo, element) => (element.hasAttribute('id') ? null : undefined) });
+// @ts-expect-error a type info, not a type name
+context.createMarshaller({ wildcardTypeInfo: () => 'PO.USAddress' });
 // Strict integer attributes (jsonix-CR-012): the forms only Number() reads reach onInvalidValue; elsewhere, today's reading.
 const strict = context.createUnmarshaller({
   strictIntegers: true,

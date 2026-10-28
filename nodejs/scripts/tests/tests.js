@@ -14,6 +14,7 @@ module.exports =
 		"Adapters" : require('./adapters'),
 		"StrictIntegers" : require('./strictintegers'),
 		"UnexpectedText" : require('./unexpectedtext'),
+		"WildcardTypes" : require('./wildcardtypes'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

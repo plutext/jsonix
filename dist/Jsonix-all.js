@@ -2159,8 +2159,12 @@ Jsonix.Binding.Unmarshalls.Element = Jsonix.Class({
 			}
 		}
 		var name = input.getName();
-		var typeInfo = xsiTypeInfo ? xsiTypeInfo : this.getTypeInfoByElementName(name, context, scope);
+		var typeInfo = xsiTypeInfo ? xsiTypeInfo : this.getDeclaredTypeInfoByInputElement(name, context, input, scope);
 		return typeInfo;
+	},
+	// jsonix-CR-014: the declared type of an element without a resolved xsi:type; AnyElementPropertyInfo lets the caller answer it.
+	getDeclaredTypeInfoByInputElement : function(name, context, input, scope) {
+		return this.getTypeInfoByElementName(name, context, scope);
 	},
 	getTypeInfoByElementName : function(name, context, scope) {
 		var elementInfo = context.getElementInfo(name, scope);
@@ -4035,6 +4039,35 @@ Jsonix.Model.AnyElementPropertyInfo = Jsonix.Class(Jsonix.Binding.Marshalls.Elem
 				this.marshalElement(value, context, output, scope);
 			}
 		}
+	},
+	getDeclaredTypeInfoByInputElement : function(name, context, input, scope) {
+		// jsonix-CR-014: the caller may declare the type of an element the wildcard holds, given its parent
+		// and the element itself; undefined or null keeps the lookup by name.
+		if (context.wildcardTypeInfo && this.allowTypedObject) {
+			var typeInfo = this.checkWildcardTypeInfo(context.wildcardTypeInfo(name, input.node.parentNode, this, scope, input.node), name);
+			if (typeInfo) {
+				return typeInfo;
+			}
+		}
+		return this.getTypeInfoByElementName(name, context, scope);
+	},
+	convertToTypedNamedValue : function(value, context, output, scope) {
+		var typedNamedValue = Jsonix.Binding.Marshalls.Element.AsElementRef.prototype.convertToTypedNamedValue.call(this, value, context, output, scope);
+		// jsonix-CR-014: the same declaration on marshal, given the parent being written and the value; xsi:type is then
+		// written only where the value's class differs from the answer.
+		if (context.wildcardTypeInfo) {
+			var typeInfo = this.checkWildcardTypeInfo(context.wildcardTypeInfo(typedNamedValue.name, output.peek(), this, scope, typedNamedValue.value), typedNamedValue.name);
+			if (typeInfo) {
+				typedNamedValue.typeInfo = typeInfo;
+			}
+		}
+		return typedNamedValue;
+	},
+	checkWildcardTypeInfo : function(typeInfo, name) {
+		if (Jsonix.Util.Type.exists(typeInfo) && !(typeInfo instanceof Jsonix.Model.TypeInfo)) {
+			throw new Error("Type info for element [" + name.key + "] must be a Jsonix.Model.TypeInfo.");
+		}
+		return typeInfo;
 	},
 	doBuild : function(context, module) {
 		// Nothing to do

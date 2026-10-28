@@ -62,8 +62,12 @@ Jsonix.Binding.Unmarshalls.Element = Jsonix.Class({
 			}
 		}
 		var name = input.getName();
-		var typeInfo = xsiTypeInfo ? xsiTypeInfo : this.getTypeInfoByElementName(name, context, scope);
+		var typeInfo = xsiTypeInfo ? xsiTypeInfo : this.getDeclaredTypeInfoByInputElement(name, context, input, scope);
 		return typeInfo;
+	},
+	// jsonix-CR-014: the declared type of an element without a resolved xsi:type; AnyElementPropertyInfo lets the caller answer it.
+	getDeclaredTypeInfoByInputElement : function(name, context, input, scope) {
+		return this.getTypeInfoByElementName(name, context, scope);
 	},
 	getTypeInfoByElementName : function(name, context, scope) {
 		var elementInfo = context.getElementInfo(name, scope);
