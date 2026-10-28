@@ -1,6 +1,6 @@
 # jsonix-CR-014: Declare the type of an element a wildcard holds: a per-call `wildcardTypeInfo`, on unmarshal and on marshal
 
-**Status:** Implemented 2026-10-28 (section 9), for 3.11.0; W1 to W3 decided as recommended (Jason, 2026-10-28)
+**Status:** Implemented 2026-10-28 (section 9), version 3.11.0; W1 to W3 decided as recommended (Jason, 2026-10-28)
 **Depends on:** nothing; 3.10.0 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts` for its CR-018 (section 4.1, B1 (a) and B2 (a)). Jason, 2026-10-28:
 "if it would be neater to ask for a jsonix change, we can do that". objects prototyped the hook by patching 3.10.0
