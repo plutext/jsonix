@@ -1,6 +1,6 @@
 # jsonix-CR-015: An element a property can neither type nor hold as DOM is skipped and reported when the caller set `onUnexpectedElement`
 
-**Status:** Proposed 2026-11-05; U1 to U3 for Jason. Nothing implemented
+**Status:** Decided 2026-11-06, U1 to U3 as recommended (Jason); being implemented
 **Depends on:** nothing; 3.11.0 is the baseline
 **Requested by:** `plutext/docx4j-core-ts` for its CR-026 D2 (sections 1, 2 and 3.1, at core-ts `5c75758`, local). Jason,
 2026-11-05, relayed by the core-ts session: "commit, then instruct the jsonix agent to write the CR". The request is for
@@ -23,16 +23,16 @@ context.createUnmarshaller({ onUnexpectedElement: function (name, node, classInf
 With the callback set, the element is reported and skipped, and the read goes on. Unset, the same error is thrown. The
 document root keeps its error either way.
 
-Measuring this found two more ways an unknown child fails a read, neither of which CR-026 tried and neither of which goes
-through this branch: a class with no element or value content (852 of 2,173 classes, among them `w:jc`, `w:b` and `w:br`)
-and a class with a text value (23 classes, among them `w:t`). U2 and U3 ask whether this CR takes them.
+Measuring this found two more ways an unknown child fails a read, neither of which CR-026 first tried and neither of
+which goes through this branch: a class with no element or value content (852 of 2,173 classes, among them `w:jc`, `w:b`
+and `w:br`) and a class with a text value (23 classes, among them `w:t`). U2 and U3 asked whether this CR takes them: it takes the first and leaves the second.
 
 ## 2. Why
 
 core-ts measured two unknown elements in each of 32 WordprocessingML hosts, at 3.11.0 and objects 0.7.0 (its CR-026
 section 1). 20 hosts throw and 12 skip, with the same elements. An element whose namespace is in `mc:Ignorable`, the one
-case markup compatibility says a consumer must get past, fails like any other. docx4j and docx4j-python read such a
-document.
+case markup compatibility says a consumer must get past, fails like any other. docx4j, docx4j-python and Word 365 read such
+a document.
 
 Of the three routes core-ts compared, it chose this one (D2): route A, keeping the element as DOM, crashes a reader on a
 DOM node in `content` in 16 of the 34 cases that fail today; route C, a DOM pass over `mc:Ignorable`, can't read `w:madeUp`.
@@ -65,20 +65,44 @@ Measured on objects 0.7.0's mappings: each of the 2,173 class infos read
 | Named properties, no `any` | 1,168 | Reports both, skips | Unchanged |
 | A wildcard that keeps DOM | 20 | Keeps both, no report | Unchanged |
 | A list or wildcard with `allowDom: false` | 110 (19 modules, 35 in `org_docx4j_wml`) | Throws `could not be unmarshalled as is not known in this context ...` | Reports both, skips |
-| No element or value content | 852 (67 modules, 240 of `org_docx4j_wml`'s 385) | Throws `Illegal state: must be END_ELEMENT.` | U2 |
-| A value | 23 (11 modules, 2 in `org_docx4j_wml`) | Throws `Element text content may not contain START_ELEMENT.` | U3 |
+| No element or value content | 852 (67 modules, 240 of `org_docx4j_wml`'s 385) | Throws `Illegal state: must be END_ELEMENT.` | Reports both, skips (U2) |
+| A value | 23 (11 modules, 2 in `org_docx4j_wml`) | Throws `Element text content may not contain START_ELEMENT.` | Unchanged (U3) |
 
 The 110 classes come from core-ts's 94 properties (72 element-reference lists, 7 single element references, 15 wildcards),
 with derived classes inheriting the list. The 852 include 62 classes with no properties at all. A simple-typed element
 property fails as a value class does: 183 of the 4,044 `ElementPropertyInfo`, 1 in `org_docx4j_wml`.
 
-Through a real document, with the callback set:
+Through a real document, read by the runtime directly (objects' context, none of core-ts's load path), with the callback
+set:
 
 | Host | 3.11.0 with this CR's branch |
 |---|---|
 | `w:p` | Read, reported against `P` |
 | `w:jc`, `w:b`, `w:br`, `w:tab` in a run | `ext:opaque (line 1): Illegal state: must be END_ELEMENT.` |
 | `w:t`, `w:instrText` | `ext:opaque (line 1): Element text content may not contain START_ELEMENT.` |
+
+core-ts's load path differs at the last row: its CR-021 pass (`src/opc/repair/breaks.mts`) runs before the runtime and takes
+any element out of a `w:t`, `w:instrText`, `w:delText` or `w:delInstrText`, so the runtime never sees one. Its `w:b`, `w:br`,
+`w:jc` and `w:tab` fail the part as above, and docx4j 17.3.5 reads all of these, dropping the element (core-ts's CR-026
+section 1, measured 2026-11-05).
+
+Word 365, from core-ts's check 76 (CR-026 sections 4.1 to 4.4, at `80a4707`, local, with round 6 in its working tree; its saves
+and PDFs are in `test/check76/`):
+
+| Case | Word 365 |
+|---|---|
+| An ignorable element in `w:sdtPr`, `w:p`, `w:r`, `w:tc` (`76a` to `76d`) | No message; the element gone |
+| An ignorable element in a `w:b` (`76l`) | No message; `<w:b/>`, the text bold |
+| An ignorable element or `w:madeUp` in a `w:t`, empty or holding text (`76m`, `76n`, `76u`) | No message; `TARGET TEXT`, the text around it joined and what it held gone |
+| A foreign element that isn't ignorable, in all seven hosts tried, `w:b` and `w:t` among them (`76e`, `76o` to `76s`, `76v`) | Could not repair the file |
+| `w:madeUp` in a content host, holding what the host admits, in all fifteen tried (`76t`, `w:body`, `w:tc`, `w:tr` and others; CR-026 section 4.4) | The tags gone and **what it held read** |
+| `w:madeUp` holding a property, in `w:pPr` or `w:rPr` (`76t5`, `76t6`) | No message; gone with all it holds, as in a `w:t` |
+| `w:madeUp` holding a run, in `w:pPr` (`76t27`) | No message; the words read, at the head of the paragraph |
+| `w:madeUp` holding a run, in `w:rPr` (`76t28`) | Refused the file |
+
+Section 4 doesn't depend on any of this. The runtime holds no Word rules: it reads a file Word refuses as it reads one Word
+accepts, as the class's own branch does today (`76p`), and core-ts reports such a file rather than refusing it (its D3).
+Sections 5 and 6 say what Word's readings mean for U2, U3 and the last four rows.
 
 ## 4. Proposal
 
@@ -99,7 +123,8 @@ In `Unmarshalls.Element.unmarshalElement`, where `allowTypedObject` is on, no ty
   `input.skipElement()`, and return without calling `callback`.
 - **Otherwise:** throw exactly as today.
 
-The element is dropped, and nothing keeps it. core-ts's save handles that through its CR-025.
+The element is dropped with all it holds, and nothing keeps it. core-ts's save handles that through its CR-025. Word doesn't
+always drop what it holds (section 6).
 
 ### 4.2 Where the input stands afterwards
 
@@ -287,6 +312,9 @@ packages in those modules: that is section 8's downstream check.
 
 ## 5. Decisions for Jason
 
+Decided as recommended (Jason, 2026-11-06: "CR-015 recommendations on U1 to U3 accepted. please commit then start
+implementing"): U1 the callback itself, U2 (a), U3 (a).
+
 - **U1. The gate.** I recommend the callback itself, as CR-026 section 3.1 says. It has one consequence that section
   doesn't state: "a caller who hasn't asked sees no change" means a caller without the callback. A caller who set it to
   watch a read gets a report where it got a throw. It is the first time a reporting callback changes whether a read
@@ -308,19 +336,37 @@ packages in those modules: that is section 8's downstream check.
     elements loop does; it is a lax-ification of an error path, so it is proposed separately." This would be that proposal.
   - The change is small, since site C already walks these events for CR-013 (section 4.10), and the prototype takes all
     852 with no change to any other row.
-  - Against: it is beyond what core-ts asked, nobody has met it in a file (none of core-ts's 720 packages holds an unknown
-    element in any host), and Word's handling of a child of `w:jc` is unmeasured, since check 76 doesn't try one. It also
-    retires a sentence of CLAUDE.md's contract row, and the advice in CR-006 section 9 to translate a located throw.
-  - Under (b) nothing is lost but time: it is additive, a later CR and a second floor raise.
+  - core-ts has since measured these hosts through its load path: `w:b`, `w:br`, `w:jc` and `w:tab` fail the part, where
+    docx4j 17.3.5 reads them. Its CR-026 section 3.4 says its title holds only if the answer here is (a).
+  - Word reads past an ignorable child of `w:b` (`76l`, section 3), which is the reading this gives. That is one host of the
+    852.
+  - Against: it is beyond what core-ts first asked, and nobody has met it in a file (none of core-ts's 720 packages holds an
+    unknown element in any host). Word's reading holds for ignorable content, not every child: it could not repair `76s`,
+    the same element in a namespace that isn't ignorable, and this reads that file. It also retires a sentence of CLAUDE.md's
+    contract row, and the advice in CR-006 section 9 to translate a located throw.
+  - Under (b) nothing is lost but time, since it is additive: a later CR and a second floor raise. Until then those hosts
+    fail their part, and CR-026 has to narrow its title.
 
-- **U3. Classes with a value, and simple-typed elements.** (a) They keep the throw, or (b) this CR skips the element and
-  joins the text around it. I recommend (a).
-  - `<w:t>hi<ext:opaque/> there</w:t>` would read "hi there", which changes a value, not just the content around it, and
-    the report names only the element. CR-026 D4 has left the text model's side of this open, for the WD.
+- **U3. Classes with a value, and simple-typed elements.** (a) They keep the throw, or (b) this CR skips the element with all
+  it holds and joins the text around it. I recommend (a), for a narrower reason than this CR first gave.
+  - Check 76 removes the argument this led with. `<w:t>hi<ext:opaque/> there</w:t>` reading "hi there" does change a value,
+    and it is Word's reading: with an ignorable element or `w:madeUp`, empty or holding text, Word joins the text around it
+    and loses what it held (`76m`, `76n`, `76u`).
+  - But that is measured where nobody needs (b). At `w:t`, `w:instrText`, `w:delText` and `w:delInstrText` core-ts's CR-021
+    pass acts first (section 3), and since `33bae48` it drops such an element with all it holds, as Word does. Those four
+    are 2 of the 23 value classes.
+  - What (b) would add is unmeasured: the other 21 classes (`m:t` and a SpreadsheetML cell formula among them) and the 183
+    simple-typed properties. 5 of the 23 and 80 of the 183 hold no string but a number, date, boolean, enumeration or binary,
+    where `1<ext:o/>2` would read as 12.
+  - Even in a `w:t`, the reading depends on the element. Word honours a `w:br` and a nested `w:t` there (core-ts's CR-021
+    section 11), and could not repair a file with one that isn't ignorable (`76v`) or is in no namespace (`76x`, `76y`).
+    core-ts's pass tells these apart. The runtime holds no Word rules, so (b) would drop them all alike.
   - The throw is in `Input.getElementText`, which every simple type shares and which has no class or callback in hand, so
     this is a larger change, touching the most common element in a document.
   - The failure stays located, and 3.11.0's: `ext:opaque (line 1): Element text content may not contain START_ELEMENT.`
-  - CR-026 should say that these hosts still refuse, under either answer to U2.
+  - Under (a) nothing is lost but time, since (b) is additive: a later CR can take a class once its reading is measured. Until
+    then the four text elements stay refused for a direct `unmarshalString`, and every other value class and simple-typed
+    element property refuses in both.
 
 ## 6. Out of scope
 
@@ -331,7 +377,14 @@ packages in those modules: that is section 8's downstream check.
 - **An element-reference list with a wrapper, meeting an unknown child outside it.** `structure.any` sends that element to
   the property, which reads it as if it were the wrapper: its children join the list and nothing is reported. That is
   3.11.0's behaviour with the callback set or unset, and it stays. Objects' mappings have no wrappers.
-- **`mc:MustUnderstand` and `mc:ProcessContent`,** which belong above the runtime (CR-026 section 3.4).
+- **Reading what a skipped element holds.** `onUnexpectedElement`'s return value is ignored, so a caller can't ask the runtime
+  to read the element's children in its place, and the class's own branch has never descended either. Word does that for an
+  unknown `w:` element in fifteen content hosts, but not for a property in `w:pPr` or `w:rPr` or anything in a `w:t`, and a run
+  in `w:pPr` is read where one in `w:rPr` has the file refused (section 3). core-ts has decided to read as Word does in those
+  fifteen (its D7, 2026-11-06), with a DOM pass ahead of the runtime (its CR-026 section 3.7), and its D8, open, asks whether
+  that pass takes the `w:pPr` run. Neither asks anything of this CR. Everything else still comes here: a foreign element, and
+  an unknown `w:` element in a host that pass doesn't list, which goes with all it holds.
+- **`mc:MustUnderstand` and `mc:ProcessContent`,** which belong above the runtime (CR-026 section 3.5).
 - **The marshal side.** A skipped element isn't in the tree.
 
 ## 7. If declined
