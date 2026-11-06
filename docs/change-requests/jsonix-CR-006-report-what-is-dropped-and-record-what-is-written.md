@@ -314,6 +314,8 @@ Consequence for a validating consumer: collect the callbacks and translate a loc
 same problem shape (core-ts CR-002 section 27 now says so); no further hook is needed. A follow-up
 could make the element-less branch skip and report children like the elements loop does; it is a
 lax-ification of an error path, so it is proposed separately, not folded in here.
+jsonix-CR-015 is that follow-up: with `onUnexpectedElement` set, such a child is reported and skipped, and a class with a
+simple value keeps its throw.
 
 **Reading note from objects-ts (2026-09-27), settled as tidy-up only:** the unexpected-attribute
 report is inside the pre-existing `if (exists(this.structure.attributes))` guard. `structure.attributes`

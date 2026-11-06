@@ -175,13 +175,22 @@ export namespace Jsonix {
 
   /**
    * Callbacks an unmarshaller reports dropped content through (jsonix-CR-006). Lax reading is the
-   * default and stays so: these only tell you what it dropped. Not a validator: a class with an
-   * `any` or `anyAttribute` wildcard keeps unknown elements or attributes and reports none.
+   * default and stays so: these tell you what it dropped. One changes the read: with
+   * `onUnexpectedElement` set, an element nothing can hold is reported and skipped instead of
+   * failing the unmarshal (jsonix-CR-015). Not a validator: a wildcard that keeps an unknown element
+   * or attribute reports none.
    */
   export interface UnmarshalCallbacks {
     /**
-     * An element the class info did not expect is skipped. `node` is the DOM element the input
-     * stands on; in Node (xmldom) it carries `lineNumber` and `columnNumber`, in browsers not.
+     * An element the class info did not expect is skipped, with all it holds. That includes two
+     * cases that fail the unmarshal when this is unset (jsonix-CR-015): an element a list or wildcard
+     * property can neither type nor keep as DOM (`allowDom: false`), and a child of a class with no
+     * element or value content. An unknown document root always fails, and so does a child of an
+     * element with a value or a simple type. `node` is the DOM element the input stands on; in Node
+     * (xmldom) it carries `lineNumber` and `columnNumber`, in browsers not. `classInfo` is the class
+     * being read, which is the derived class where a base type declares the property. To refuse the
+     * element, throw: the error is located, but for a direct child of the root element in a class's
+     * own skip.
      */
     onUnexpectedElement?(name: XML.QName, node: Node, classInfo: ClassInfo): void;
     /**

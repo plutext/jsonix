@@ -15,6 +15,7 @@ module.exports =
 		"StrictIntegers" : require('./strictintegers'),
 		"UnexpectedText" : require('./unexpectedtext'),
 		"WildcardTypes" : require('./wildcardtypes'),
+		"UnknownElements" : require('./unknownelements'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

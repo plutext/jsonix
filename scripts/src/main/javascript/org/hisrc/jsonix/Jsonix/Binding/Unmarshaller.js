@@ -2,6 +2,7 @@ Jsonix.Binding.Unmarshaller = Jsonix.Class(Jsonix.Binding.Unmarshalls.Element, J
 	context : null,
 	allowTypedObject : true,
 	allowDom : false,
+	canSkipUnknownElement : false,
 	initialize : function(context) {
 		Jsonix.Util.Ensure.ensureObject(context);
 		this.context = context;

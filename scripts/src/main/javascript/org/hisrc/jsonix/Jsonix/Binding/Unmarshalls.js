@@ -24,6 +24,7 @@ Jsonix.Binding.Unmarshalls.WrapperElement = Jsonix.Class({
 Jsonix.Binding.Unmarshalls.Element = Jsonix.Class({
 	allowTypedObject : true,
 	allowDom : false,
+	canSkipUnknownElement : true,
 	unmarshalElement : function(context, input, scope, callback) {
 		if (input.eventType != 1) {
 			throw new Error("Parser must be on START_ELEMENT to read next element.");
@@ -42,6 +43,11 @@ Jsonix.Binding.Unmarshalls.Element = Jsonix.Class({
 				elementValue = this.convertFromTypedNamedValue(typedNamedValue, context, input, scope);
 			} else if (this.allowDom) {
 				elementValue = input.getElement();
+			} else if (this.canSkipUnknownElement && context.onUnexpectedElement) {
+				// jsonix-CR-015: the element is dropped, as in ClassInfo.unmarshal's own branch; the input ends on its END_ELEMENT.
+				context.onUnexpectedElement(name, input.node, scope);
+				input.skipElement();
+				return;
 			} else {
 				throw new Error("Element [" + name.toString() + "] could not be unmarshalled as is not known in this context and the property does not allow DOM content.");
 			}

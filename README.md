@@ -125,7 +125,8 @@ const text = context.createMarshaller().marshalString<PurchaseOrderElement>({
   DOMImplementation })` supplies the DOM to use. In Node, XML 1.0 text keeps raw U+0085 and U+2028 (xmldom's default
   would turn them into line feeds).
 * `context.createUnmarshaller({ onUnexpectedElement, onUnexpectedAttribute })` reports what lax reading drops (not a
-  validator: wildcards keep content and report nothing), `context.createMarshaller({ onElement })` records which object
+  validator: wildcards that keep content report nothing); with `onUnexpectedElement` set, an element nothing can hold is
+  skipped and reported instead of failing the read, `context.createMarshaller({ onElement })` records which object
   each written element came from, and an error from a wrongly typed value names the element, attribute and line. Options
   given to `createUnmarshaller` / `createMarshaller` apply to that call only and never change the shared context.
 * `new Jsonix.Context(mappings, { parentPointers: true })` gives every unmarshalled typed object a non-enumerable

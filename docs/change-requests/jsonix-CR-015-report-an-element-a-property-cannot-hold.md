@@ -421,3 +421,84 @@ context, and has the root and position problems this CR settles.
   5, and objects runs its fidelity corpus and full suite, with the callback set and unset.
 - **Version.** Release as 3.12.0, a minor version: a caller with the callback set sees new behaviour (U1). core-ts then
   raises its floor (CR-026 phase 1).
+
+## 9. As implemented (2026-11-06)
+
+As sections 4.1 to 4.10 describe, with U1 to U3 as recommended. Not released: 3.12.0 waits on section 8's downstream check.
+- `Unmarshalls.Element` gains `canSkipUnknownElement: true` and section 4.10's branch. `Jsonix.Binding.Unmarshaller` sets the
+  flag false, and `Unmarshaller.Simplified` inherits that.
+- `ClassInfo.unmarshal`'s no-content skip is section 4.10's loop, under
+  `context.onUnexpectedText || context.onUnexpectedElement`.
+
+The same edit is in the modular sources (`Jsonix/Binding/Unmarshalls.js`, `Jsonix/Binding/Unmarshaller.js`,
+`Jsonix/Model/ClassInfo.js`) and `dist/Jsonix-all.js`.
+
+**Typings and contract.** Section 4.9's notes, widened for U2: `onUnexpectedElement`'s names both cases, the two throws that
+stay, and the one place a throw from the callback isn't located. CLAUDE.md's contract row and per-call paragraph follow,
+and CR-013's row, whose `nextTag` skip now runs as before only when neither callback is set. Both READMEs say so, and
+CR-006 section 9 points here. `tests/typescript/usage.ts` is unchanged: no signature changed.
+
+**Tests.** `tests/unknownelements.js` has 39 tests and 78 assertions, on a hand-written mapping, covering section 8's list.
+It adds U3's guards: a value class and a simple-typed element, of a number and of a string, keep their throw with the
+callback set and don't call it. Against 3.11.0, 23 tests fail, and the 16 that pass are those expecting nothing to change.
+Setting the root's flag true fails all three root tests. The full suite has 3,534 assertions. Typecheck, ESM and bundle
+checks pass.
+
+**The three copies agree.** The dist and modular copies, loaded as a browser loads them, give the npm copy's output on 378
+cases: 27 documents, 7 sets of options, both styles, with 72 of each style's 189 reads reporting and 92 throwing.
+
+**Census.** Section 4.11's run, on this code and objects 0.7.0's 2,173 class infos: 2,130 report both elements, 20 keep them,
+and 23 throw the text error. Every class that reported ended with the input on the host's END_ELEMENT and named the class
+read. Unset, every row is 3.11.0's. So the prototype's numbers hold.
+
+**Cost.** Not measurable. 20 paragraphs of 400 runs, each run holding five elements of classes with no content, read from a
+parsed DOM: the median of 7 processes, one configuration each, each the median of 25 reads.
+
+| | 3.11.0 | This CR | Change |
+|---|---|---|---|
+| Unset | 115.0 ms | 112.3 ms | -2.3% |
+| `onUnexpectedElement` set | 113.4 ms | 114.6 ms | +1.1% |
+
+All 28 runs fall between 108.5 and 118.0 ms.
+
+**Downstream check.** Against the checkout, `jsonix-factory.js` at sha256
+`c8070eaac0248985f8d964ca90baf84095e195d36249cc2c6fffa248f81d34c9`.
+
+objects passed on 2026-11-06, in a scratch copy of its `93511a0`, on Node 22, with 3.11.0 run the same way as the baseline:
+- `npm test`, typecheck and `test/fidelity.mjs` (359 checks) give output identical to 3.11.0's, and all 341 marshal hashes match.
+- All 529 fixture parts, read unset, set and set with `onMisplaced`: none of the 1,587 cases differs. With the callback set, no
+  element is reported on either runtime, and the same 8 parts throw on both, all at the document root.
+- 12 synthetic hosts, an unknown element holding a child: unset is identical. Set, 11 go from a throw to a read, reported and
+  dropped (`w:body`, `w:p`, `w:r`, `w:tbl`, `w:tr`, `w:tc`, `w:sdtContent`, `w:hdr`, `w:comment`, `w:b`, `w:jc`), and the root
+  still throws.
+- `onMisplaced` without `onUnexpectedElement` is identical, which covers `onUnexpectedText` alone through the no-content skip.
+
+Its corpus holds no unknown element, so what the callback changes shows only in those hosts. By reading `test/fidelity.mjs`,
+a throw that becomes a read reaches its classifier, which accepts only elements already in `LOST_ON_RESOLUTION`. objects'
+`src/index.mts` comment saying these options report needs a change on its side, left for Jason to schedule.
+
+core-ts passed on 2026-11-06, with 3.11.0 as locked for the baseline, one configuration per process, attaching the callback by
+wrapping `createUnmarshaller`:
+- **Unset, nothing moved.** 1,001 real packages, 15,679 saved entries, every hash 3.11.0's; 80 hosts by 3 elements through the
+  facade; and 119 files (CR-026's 52, 12 further, check 76's 55).
+- **Set, no false report.** The same hashes, with `onUnexpectedElement` alone and with all three callbacks, and the reports are
+  3.11.0's exactly: 0 elements, 17 attributes, 1 text. So U2's loop reports nothing new on real content.
+- **Set, the change works.** 228 of the 240 host cases read as the same document without the element, each reported once, and
+  the other 12 (`w:t`, `w:instrText`, `a:t`, `x:v`) throw as U3 decided. All 119 files read, where 77 failed on 3.11.0.
+  Through the real load path, 60 cases in docx, pptx and xlsx parts read, each reported once, with the saved part equal to its
+  control's, and all 60 fail unset.
+- **Injected into real parts.** 6,384 parts up to 400 KB, all 1,555 parent and child pairs met, an unknown element first, middle
+  and last: 5,364 trials, each held to the part without it. 1,866 throw on 3.11.0 and are clean here, reported once and
+  marshalling equal to the part's own. 2,862 are clean on both, 484 kept by a wildcard on both, 140 throw on both (19 hosts
+  holding text, U3), and 12 are the same on both. Every trial that changed went from a throw to clean.
+- `npm test`, 1,813 of 1,813, and typecheck pass on the checkout.
+
+Not run: core-ts's strict-mode load, and anything on a published tarball, which is its run when it raises its floor. That raise
+needs an objects release, since core-ts gets this package through objects, whose `^3.11.0` admits 3.12.0 without requiring it.
+
+**Found along the way, not this CR's.** core-ts noticed that a single wildcard given two children keeps the last and reports
+nothing. Measured here, that holds for any single-valued element property, a named element and an element reference too, on
+3.11.0 and on this code: each child is its own `unmarshalProperty` call, so `Value already set.` never meets the second, and
+`setProperty` overwrites. core-ts then measured it on objects' model, where it reaches whole content: of two `w:body` in a
+`w:document`, the second alone is read. None of its 997 packages holds the shape, and Word's reading is unmeasured. Nothing here
+changes it.

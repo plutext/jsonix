@@ -223,12 +223,20 @@ Jsonix.Model.ClassInfo = Jsonix
 					var valuePropertyInfo = this.structure.value;
 					this.unmarshalProperty(context, input, valuePropertyInfo,
 							result);
-				} else if (context.onUnexpectedText) {
-					// jsonix-CR-013: skip as nextTag does, reporting the text it skips.
+				} else if (context.onUnexpectedText || context.onUnexpectedElement) {
+					// jsonix-CR-013, jsonix-CR-015: skip as nextTag does, reporting what it skips.
 					var skippedEventType = input.next();
-					while (skippedEventType !== Jsonix.XML.Input.START_ELEMENT && skippedEventType !== Jsonix.XML.Input.END_ELEMENT) {
-						if (skippedEventType === Jsonix.XML.Input.CHARACTERS || skippedEventType === Jsonix.XML.Input.CDATA || skippedEventType === Jsonix.XML.Input.SPACE) {
-							this.reportUnexpectedText(context, input);
+					while (skippedEventType !== Jsonix.XML.Input.END_ELEMENT) {
+						if (skippedEventType === Jsonix.XML.Input.START_ELEMENT) {
+							if (!context.onUnexpectedElement) {
+								break; // the assertion below throws, as with nextTag
+							}
+							context.onUnexpectedElement(input.getName(), input.node, this);
+							input.skipElement();
+						} else if (skippedEventType === Jsonix.XML.Input.CHARACTERS || skippedEventType === Jsonix.XML.Input.CDATA || skippedEventType === Jsonix.XML.Input.SPACE) {
+							if (context.onUnexpectedText) {
+								this.reportUnexpectedText(context, input);
+							}
 						} else if (skippedEventType !== Jsonix.XML.Input.COMMENT && skippedEventType !== Jsonix.XML.Input.PROCESSING_INSTRUCTION && skippedEventType !== Jsonix.XML.Input.START_DOCUMENT) {
 							throw new Error('Expected start or end tag.');
 						}

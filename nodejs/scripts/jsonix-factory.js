@@ -2033,6 +2033,7 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 	Jsonix.Binding.Unmarshalls.Element = Jsonix.Class({
 		allowTypedObject: true,
 		allowDom: false,
+		canSkipUnknownElement: true,
 		unmarshalElement: function (context, input, scope, callback) {
 			if (input.eventType != 1) {
 				throw new Error("Parser must be on START_ELEMENT to read next element.");
@@ -2051,6 +2052,11 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 					elementValue = this.convertFromTypedNamedValue(typedNamedValue, context, input, scope);
 				} else if (this.allowDom) {
 					elementValue = input.getElement();
+				} else if (this.canSkipUnknownElement && context.onUnexpectedElement) {
+					// jsonix-CR-015: the element is dropped, as in ClassInfo.unmarshal's own branch; the input ends on its END_ELEMENT.
+					context.onUnexpectedElement(name, input.node, scope);
+					input.skipElement();
+					return;
 				} else {
 					throw new Error("Element [" + name.toString() + "] could not be unmarshalled as is not known in this context and the property does not allow DOM content.");
 				}
@@ -2135,6 +2141,7 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 		context: null,
 		allowTypedObject: true,
 		allowDom: false,
+		canSkipUnknownElement: false,
 		initialize: function (context) {
 			Jsonix.Util.Ensure.ensureObject(context);
 			this.context = context;
@@ -2430,12 +2437,20 @@ var _jsonix_factory = function (_jsonix_xmldom, _jsonix_xmlhttprequest, _jsonix_
 					var valuePropertyInfo = this.structure.value;
 					this.unmarshalProperty(context, input, valuePropertyInfo,
 						result);
-				} else if (context.onUnexpectedText) {
-					// jsonix-CR-013: skip as nextTag does, reporting the text it skips.
+				} else if (context.onUnexpectedText || context.onUnexpectedElement) {
+					// jsonix-CR-013, jsonix-CR-015: skip as nextTag does, reporting what it skips.
 					var skippedEventType = input.next();
-					while (skippedEventType !== Jsonix.XML.Input.START_ELEMENT && skippedEventType !== Jsonix.XML.Input.END_ELEMENT) {
-						if (skippedEventType === Jsonix.XML.Input.CHARACTERS || skippedEventType === Jsonix.XML.Input.CDATA || skippedEventType === Jsonix.XML.Input.SPACE) {
-							this.reportUnexpectedText(context, input);
+					while (skippedEventType !== Jsonix.XML.Input.END_ELEMENT) {
+						if (skippedEventType === Jsonix.XML.Input.START_ELEMENT) {
+							if (!context.onUnexpectedElement) {
+								break; // the assertion below throws, as with nextTag
+							}
+							context.onUnexpectedElement(input.getName(), input.node, this);
+							input.skipElement();
+						} else if (skippedEventType === Jsonix.XML.Input.CHARACTERS || skippedEventType === Jsonix.XML.Input.CDATA || skippedEventType === Jsonix.XML.Input.SPACE) {
+							if (context.onUnexpectedText) {
+								this.reportUnexpectedText(context, input);
+							}
 						} else if (skippedEventType !== Jsonix.XML.Input.COMMENT && skippedEventType !== Jsonix.XML.Input.PROCESSING_INSTRUCTION && skippedEventType !== Jsonix.XML.Input.START_DOCUMENT) {
 							throw new Error('Expected start or end tag.');
 						}
