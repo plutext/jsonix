@@ -1,6 +1,6 @@
 # jsonix-CR-015: An element a property can neither type nor hold as DOM is skipped and reported when the caller set `onUnexpectedElement`
 
-**Status:** Decided 2026-11-06, U1 to U3 as recommended (Jason); being implemented
+**Status:** Implemented 2026-11-06 (section 9), version 3.12.0; U1 to U3 decided as recommended (Jason, 2026-11-06)
 **Depends on:** nothing; 3.11.0 is the baseline
 **Requested by:** `plutext/docx4j-core-ts` for its CR-026 D2 (sections 1, 2 and 3.1, at core-ts `5c75758`, local). Jason,
 2026-11-05, relayed by the core-ts session: "commit, then instruct the jsonix agent to write the CR". The request is for
@@ -95,7 +95,7 @@ and PDFs are in `test/check76/`):
 | An ignorable element in a `w:b` (`76l`) | No message; `<w:b/>`, the text bold |
 | An ignorable element or `w:madeUp` in a `w:t`, empty or holding text (`76m`, `76n`, `76u`) | No message; `TARGET TEXT`, the text around it joined and what it held gone |
 | A foreign element that isn't ignorable, in all seven hosts tried, `w:b` and `w:t` among them (`76e`, `76o` to `76s`, `76v`) | Could not repair the file |
-| `w:madeUp` in a content host, holding what the host admits, in all fifteen tried (`76t`, `w:body`, `w:tc`, `w:tr` and others; CR-026 section 4.4) | The tags gone and **what it held read** |
+| `w:madeUp` in a content host, holding what the host admits, in all twenty tried (`76t`, `w:body`, `w:tc`, `w:tr` and others; CR-026 section 4.4) | The tags gone and **what it held read** |
 | `w:madeUp` holding a property, in `w:pPr` or `w:rPr` (`76t5`, `76t6`) | No message; gone with all it holds, as in a `w:t` |
 | `w:madeUp` holding a run, in `w:pPr` (`76t27`) | No message; the words read, at the head of the paragraph |
 | `w:madeUp` holding a run, in `w:rPr` (`76t28`) | Refused the file |
@@ -379,10 +379,10 @@ implementing"): U1 the callback itself, U2 (a), U3 (a).
   3.11.0's behaviour with the callback set or unset, and it stays. Objects' mappings have no wrappers.
 - **Reading what a skipped element holds.** `onUnexpectedElement`'s return value is ignored, so a caller can't ask the runtime
   to read the element's children in its place, and the class's own branch has never descended either. Word does that for an
-  unknown `w:` element in fifteen content hosts, but not for a property in `w:pPr` or `w:rPr` or anything in a `w:t`, and a run
+  unknown `w:` element in twenty content hosts, but not for a property in `w:pPr` or `w:rPr` or anything in a `w:t`, and a run
   in `w:pPr` is read where one in `w:rPr` has the file refused (section 3). core-ts has decided to read as Word does in those
-  fifteen (its D7, 2026-11-06), with a DOM pass ahead of the runtime (its CR-026 section 3.7), and its D8, open, asks whether
-  that pass takes the `w:pPr` run. Neither asks anything of this CR. Everything else still comes here: a foreign element, and
+  twenty (its D7, 2026-11-06), with a DOM pass ahead of the runtime (its CR-026 section 3.7), and its D8, the same day, has
+  that pass take the `w:pPr` run. Neither asks anything of this CR. Everything else still comes here: a foreign element, and
   an unknown `w:` element in a host that pass doesn't list, which goes with all it holds.
 - **`mc:MustUnderstand` and `mc:ProcessContent`,** which belong above the runtime (CR-026 section 3.5).
 - **The marshal side.** A skipped element isn't in the tree.
@@ -424,7 +424,7 @@ context, and has the root and position problems this CR settles.
 
 ## 9. As implemented (2026-11-06)
 
-As sections 4.1 to 4.10 describe, with U1 to U3 as recommended. Not released: 3.12.0 waits on section 8's downstream check.
+As sections 4.1 to 4.10 describe, with U1 to U3 as recommended. Section 8's downstream check passed, below, and it was released as 3.12.0.
 - `Unmarshalls.Element` gains `canSkipUnknownElement: true` and section 4.10's branch. `Jsonix.Binding.Unmarshaller` sets the
   flag false, and `Unmarshaller.Simplified` inherits that.
 - `ClassInfo.unmarshal`'s no-content skip is section 4.10's loop, under
@@ -475,7 +475,8 @@ objects passed on 2026-11-06, in a scratch copy of its `93511a0`, on Node 22, wi
 
 Its corpus holds no unknown element, so what the callback changes shows only in those hosts. By reading `test/fidelity.mjs`,
 a throw that becomes a read reaches its classifier, which accepts only elements already in `LOST_ON_RESOLUTION`. objects'
-`src/index.mts` comment saying these options report needs a change on its side, left for Jason to schedule.
+`src/index.mts` and README say these options report what the model dropped, which stays true but no longer says all they do.
+The fix goes in the objects release that raises its floor, since it holds only from there.
 
 core-ts passed on 2026-11-06, with 3.11.0 as locked for the baseline, one configuration per process, attaching the callback by
 wrapping `createUnmarshaller`:
@@ -493,8 +494,24 @@ wrapping `createUnmarshaller`:
   holding text, U3), and 12 are the same on both. Every trial that changed went from a throw to clean.
 - `npm test`, 1,813 of 1,813, and typecheck pass on the checkout.
 
-Not run: core-ts's strict-mode load, and anything on a published tarball, which is its run when it raises its floor. That raise
-needs an objects release, since core-ts gets this package through objects, whose `^3.11.0` admits 3.12.0 without requiring it.
+core-ts's run on the published package comes when it raises its floor. That raise needs an objects release, since core-ts gets
+this package through objects, whose `^3.11.0` admits 3.12.0 without requiring it.
+
+**Rechecked at `0936c2f`,** each on a package built from that commit, the factory hash unchanged, in place of 3.11.0:
+- objects, at `93511a0`, on Node 18.20.8, 20.20.2 and 22.23.4: typecheck and `npm test` give output identical to 3.11.0's, and
+  all 341 marshal hashes match across the six runs. This package's own suite passes on the same three versions (CI runs Node 22
+  alone). The package holds the same 12 files as 3.11.0. An unknown element put in a `wps` Choice of a real part fails fidelity
+  on both runtimes, only on `[resolved]`: by the throw on 3.11.0, by an unexplained difference here. That measures the reading
+  above. Seven callbacks set at once report it once and leave the other reports as they were.
+- core-ts, at `2701e59`, with its CR-025 built, so the callbacks are passed on every read and not by a wrapper: `npm test`,
+  1,884 of 1,884, and typecheck pass. Of check 76's 98 sources through the real load path, 2 fail where 68 fail on 3.11.0. Those
+  2 (`76t44`, `76t45`) are a `TypeError` in core-ts's own `TrackedChange` reader, the same on 3.11.0. Of the 15,679 saved parts
+  two differ from the baseline, both from core-ts's CR-025 and the same on 3.11.0. The factory loads under `"use strict"`, and
+  79 of 79 pass on the three suites run that way, a subset.
+
+Both advise releasing, and ask for nothing further in this version. Not covered: browsers, a real file with an unknown element
+on objects' side (its corpus has none; core-ts's evidence is the real one), and the bytes npm serves, which only a run after
+publishing can check.
 
 **Found along the way, not this CR's.** core-ts noticed that a single wildcard given two children keeps the last and reports
 nothing. Measured here, that holds for any single-valued element property, a named element and an element reference too, on
