@@ -518,4 +518,4 @@ nothing. Measured here, that holds for any single-valued element property, a nam
 3.11.0 and on this code: each child is its own `unmarshalProperty` call, so `Value already set.` never meets the second, and
 `setProperty` overwrites. core-ts then measured it on objects' model, where it reaches whole content: of two `w:body` in a
 `w:document`, the second alone is read. None of its 997 packages holds the shape, and Word's reading is unmeasured. Nothing here
-changes it.
+changes it. objects measured Word later the same day, and jsonix-CR-016 proposes a report.
