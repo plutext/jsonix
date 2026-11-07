@@ -1,6 +1,6 @@
 # jsonix-CR-016: A single-valued property given a second element reports the one it overwrites
 
-**Status:** Decided 2026-11-07, R1 to R3 as recommended (Jason); being implemented
+**Status:** Implemented 2026-11-07 (section 9), version 3.13.0; R1 to R3 decided as recommended (Jason, 2026-11-07)
 **Depends on:** nothing; 3.12.0 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts`, on CR-015 section 9's aside and its own Word measurement. Jason,
 2026-11-06, relayed by the objects session: "tell jsonix to write the CR". The request is for the CR, not the implementation.
@@ -364,7 +364,7 @@ Since no file in either corpus has the shape, declining costs nothing today.
 ## 9. As implemented (2026-11-07)
 
 As sections 4.1 to 4.10 describe, with R1 to R3 as recommended and one change from the sketch. Jason, 2026-11-07: "implement it".
-Not released: 3.13.0 waits on section 8's downstream check.
+Released as 3.13.0 from the implementing commit `959d98a`, once objects and core-ts had approved it, as he asked.
 
 **The change.** `heldElements` is `Object.create(null)`, not the sketch's `{}`. With `{}`, a property called `constructor` or
 `toString` finds `Object.prototype`'s member and is reported on its first element, with a `node` that isn't one. None of objects'
