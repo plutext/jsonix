@@ -136,6 +136,18 @@ context.createUnmarshaller({
 context.createUnmarshaller({ onUnexpectedText: (text: Jsonix.XML.QName) => undefined });
 // @ts-expect-error unmarshal-side only
 context.createMarshaller({ onUnexpectedText: () => undefined });
+// An overwritten element (jsonix-CR-016): both elements, the property and class, both values.
+const overwritten: { lost: unknown; kept: unknown; where: string }[] = [];
+context.createUnmarshaller({
+  onOverwrittenElement: (node, keptNode, propertyInfo, classInfo, value, keptValue) => {
+    const line: number | undefined = (node as Element & { lineNumber?: number }).lineNumber;
+    overwritten.push({ lost: value, kept: keptValue, where: `${node.localName} line ${line} by ${keptNode.localName} in ${classInfo.name}.${propertyInfo.name}` });
+  },
+});
+// @ts-expect-error the first argument is the element, not a QName
+context.createUnmarshaller({ onOverwrittenElement: (node: Jsonix.XML.QName) => undefined });
+// @ts-expect-error unmarshal-side only
+context.createMarshaller({ onOverwrittenElement: () => undefined });
 // Schema defaults on read (jsonix-CR-009): the object is unchanged, the default comes from the context.
 const countryDefault: unknown = context.getDefaultValue('PO.USAddress', 'country');
 const country: string | undefined = context.valueOrDefault(po.shipTo, 'country');

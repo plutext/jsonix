@@ -213,6 +213,16 @@ export namespace Jsonix {
      */
     onUnexpectedText?(text: string, node: Node, classInfo: ClassInfo): void;
     /**
+     * A single-valued property was given a second element, and the second's value replaces the
+     * first's (jsonix-CR-016). Called once for each value overwritten, once both are complete, so
+     * three elements give two calls. `node` and `value` are what is lost; `keptNode` and `keptValue`
+     * are what the tree holds. `node` is a wrapper element where the property has one. Not a validity
+     * claim: it says the model holds one, not that the schema allows one. The runtime stores the same
+     * value with this unset, and `keptValue` is the object it stores, so an edit to it stands. The return
+     * value is ignored. To refuse the document, throw: the error is located.
+     */
+    onOverwrittenElement?(node: Element, keptNode: Element, propertyInfo: PropertyInfo, classInfo: ClassInfo, value: unknown, keptValue: unknown): void;
+    /**
      * Called once for every element read as a typed object (jsonix-CR-008), with the source
      * element and the object, once the object is complete: its attributes and content are read and
      * its `PARENT` is set, so children are reported before their parent. An `xsi:type` element is
@@ -401,6 +411,8 @@ export namespace Jsonix {
     readonly onUnexpectedAttribute?: UnmarshalCallbacks['onUnexpectedAttribute'];
     /** Set when this is a derived context; read by the unmarshaller (jsonix-CR-013). */
     readonly onUnexpectedText?: UnmarshalCallbacks['onUnexpectedText'];
+    /** Set when this is a derived context; read by the unmarshaller (jsonix-CR-016). */
+    readonly onOverwrittenElement?: UnmarshalCallbacks['onOverwrittenElement'];
     /**
      * Set when this is a derived context; read by the marshaller (jsonix-CR-006) or the
      * unmarshaller (jsonix-CR-008), whichever the derived context was created for.

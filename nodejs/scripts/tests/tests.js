@@ -16,6 +16,7 @@ module.exports =
 		"UnexpectedText" : require('./unexpectedtext'),
 		"WildcardTypes" : require('./wildcardtypes'),
 		"UnknownElements" : require('./unknownelements'),
+		"OverwrittenElements" : require('./overwrittenelements'),
 		"Schema" : require('./schema'),
 		"NodeJS" : require('./nodejs'),
 		"SAX" : require('./sax'),

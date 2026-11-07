@@ -133,6 +133,9 @@ Jsonix.Model.ClassInfo = Jsonix
 				}
 				// jsonix-CR-008: the element this object is read from, taken before its content moves the input on.
 				var sourceElement = input.node;
+				// jsonix-CR-016: the element each single-valued property last took a value from, kept only when asked. No
+				// prototype, so that a property called constructor finds nothing here.
+				var heldElements = context.onOverwrittenElement ? Object.create(null) : null;
 
 				// Read attributes
 				if (Jsonix.Util.Type.exists(this.structure.attributes)) {
@@ -182,14 +185,14 @@ Jsonix.Model.ClassInfo = Jsonix
 									.exists(this.structure.elements[elementNameKey])) {
 								var elementPropertyInfo = this.structure.elements[elementNameKey];
 								this.unmarshalProperty(context, input,
-										elementPropertyInfo, result);
+										elementPropertyInfo, result, heldElements);
 							} else if (Jsonix.Util.Type
 									.exists(this.structure.any)) {
 								// TODO Refactor
 
 								var anyPropertyInfo = this.structure.any;
 								this.unmarshalProperty(context, input,
-										anyPropertyInfo, result);
+										anyPropertyInfo, result, heldElements);
 							} else {
 								// jsonix-CR-006: the element is dropped (a class with an any wildcard never reaches this branch); report it if asked.
 								if (context.onUnexpectedElement) {
@@ -267,9 +270,18 @@ Jsonix.Model.ClassInfo = Jsonix
 					context.onUnexpectedText(text, input.node, this);
 				}
 			},
-			unmarshalProperty: function (context, input, propertyInfo, result) {
+			unmarshalProperty: function (context, input, propertyInfo, result, heldElements) {
 				try {
+					var element = input.node;
 					var propertyValue = propertyInfo.unmarshal(context, input, this);
+					// jsonix-CR-016: setProperty overwrites whatever is there, so a second element's value is reported here, while
+					// the first's is still held. A mixed property and a map are left out, and a child that gave no value overwrites nothing.
+					if (heldElements && !propertyInfo.collection && !propertyInfo.mixed && Jsonix.Util.Type.exists(propertyValue) && !(propertyInfo instanceof Jsonix.Model.ElementMapPropertyInfo)) {
+						if (heldElements[propertyInfo.name]) {
+							context.onOverwrittenElement(heldElements[propertyInfo.name], element, propertyInfo, this, result[propertyInfo.name], propertyValue);
+						}
+						heldElements[propertyInfo.name] = element;
+					}
 					propertyInfo.setProperty(result, propertyValue);
 				} catch (e) {
 					throw Jsonix.Model.ClassInfo.locateError(e, input, null);

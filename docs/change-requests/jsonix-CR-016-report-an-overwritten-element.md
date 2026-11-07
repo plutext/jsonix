@@ -1,6 +1,6 @@
 # jsonix-CR-016: A single-valued property given a second element reports the one it overwrites
 
-**Status:** Proposed 2026-11-06; R1 to R3 open (section 5)
+**Status:** Decided 2026-11-07, R1 to R3 as recommended (Jason); being implemented
 **Depends on:** nothing; 3.12.0 is the baseline
 **Requested by:** `plutext/docx4j-generated-objects-ts`, on CR-015 section 9's aside and its own Word measurement. Jason,
 2026-11-06, relayed by the objects session: "tell jsonix to write the CR". The request is for the CR, not the implementation.
@@ -21,8 +21,9 @@ context.createUnmarshaller({
 ```
 
 With the callback set, it is called once for each value overwritten, with both elements and both values. Unset, nothing
-changes and nothing is kept. The last value stays what the tree holds, set or unset. Merging stays out of this CR: Word's rules
-differ by element, and they belong above the runtime (R3).
+changes and nothing is kept. The last value is what the runtime stores, set or unset, so a report alone doesn't bring back what
+was overwritten. Merging stays out of this CR: what Word does depends on the kind of element, and knowing the kind is a Word
+rule, which belongs above the runtime (R3).
 
 ## 2. Why
 
@@ -45,7 +46,7 @@ twice, on Word 16.0.20326.20232. Every file opened silently, and the two runs ma
 So keep-the-last matches Word in 8 of the 13 and differs in the 5 where the repeated child is a container. Neither keep-first
 nor keep-last would match. Limits, as objects states them: one Word build, small files, whether `w:sectPr` and `w:tblPr` merge
 wasn't tested, `a:ext` wasn't tested, and the `w:txbxContent` order has no explanation. The results are on the share under
-`bridge/portfolio/rc-*`.
+`bridge/portfolio/rc-*`. objects' CR-022 section 3 has since taken the measurement to 34 cases, with three and four copies.
 
 **The implementations disagree.** Of two `w:body`, docx4j and core-ts keep the second, docx4j-python keeps the first and logs
 `Skipped unknown element`, and Word keeps both. core-ts's loss is silent (`pkg.warnings` stays empty); whether docx4j logs one is
@@ -140,6 +141,17 @@ way. The runtime holds no Word rules, so it passes what a caller needs, and each
   overwritten value held anything the kept one doesn't.
 - **`propertyInfo.name` and `classInfo.name`:** for a caller that lists what it cares about.
 
+The first two have to be used together. core-ts tried them through its own load on all 16 `rc-*` and 20 `rt-*` files (2026-11-07):
+
+- `node` alone also keeps `rc-20`, `rc-22`, `rc-40` and `rc-41`, where Word and the tree agree.
+- Comparing values alone wrongly keeps `rc-32`, `<w:b w:val="0"/>` then `<w:b/>`, and `rt-31` and `rt-32`: the lost copy states
+  `val` and the kept one doesn't, yet Word takes the later value.
+- Both together give the five kinds where Word differs, plus `rt-40`'s second-to-third report, and nothing else.
+
+The comparison has to count a property the lost value holds and the kept one lacks even when it is an empty object, since `<w:b/>`
+reads as an object with no keys. The limit: a leaf with attributes isn't settled. If Word merges a repeated `w:ind`, `w:spacing` or
+`w:rFonts`, "holds child elements" passes over a real loss. That would change a caller's filter, not these arguments.
+
 ### 4.5 A report is not a validity claim
 
 The model says one; the document gave two. That says nothing about the schema. objects notes that a repeated `w:b` or `w:sz` in
@@ -180,8 +192,9 @@ Nothing changes. The read gives the same tree, the same errors and the same call
  * first's (jsonix-CR-016). Called once for each value overwritten, once both are complete, so
  * three elements give two calls. `node` and `value` are what is lost; `keptNode` and `keptValue`
  * are what the tree holds. `node` is a wrapper element where the property has one. Not a validity
- * claim: it says the model holds one, not that the schema allows one. The tree is the same with
- * this unset. The return value is ignored. To refuse the document, throw: the error is located.
+ * claim: it says the model holds one, not that the schema allows one. The runtime stores the same
+ * value with this unset, and `keptValue` is the object it stores, so an edit to it stands. The return
+ * value is ignored. To refuse the document, throw: the error is located.
  */
 onOverwrittenElement?(node: Element, keptNode: Element, propertyInfo: PropertyInfo, classInfo: ClassInfo, value: unknown, keptValue: unknown): void;
 ```
@@ -190,7 +203,7 @@ A new row in CLAUDE.md's contract table:
 
 | Generated declaration | Runtime |
 |---|---|
-| `onOverwrittenElement(node, keptNode, propertyInfo, classInfo, value, keptValue)` fires once for each value of a single-valued element property that a later element replaces, `node` being the element it was read from, whatever the two elements' names; never for a collection, a map, a mixed property, or a second element that gives no value | `ClassInfo.unmarshalProperty` (jsonix-CR-016), from `ClassInfo.unmarshal`'s two element branches. core-ts's save gate and objects' fidelity would conclude from these conditions that a tree holds all its source's single-valued children. The tree holds the last, set or unset (guarded by `tests/overwrittenelements.js`) |
+| `onOverwrittenElement(node, keptNode, propertyInfo, classInfo, value, keptValue)` fires once for each value of a single-valued element property that a later element replaces, `node` being the element it was read from, whatever the two elements' names; never for a collection, a map, a mixed property, or a second element that gives no value | `ClassInfo.unmarshalProperty` (jsonix-CR-016), from `ClassInfo.unmarshal`'s two element branches. core-ts's save gate and objects' fidelity would conclude from these conditions that a tree holds all its source's single-valued children. The runtime stores the last, set or unset, and `keptValue` is the object it stores, so a caller's edit to it stands: objects CR-022 joins and merges that way, and passing a copy would lose them (guarded by `tests/overwrittenelements.js`) |
 
 The per-call options paragraph gains the option. `onUnexpectedElement`'s row doesn't change (R1).
 
@@ -198,7 +211,7 @@ The per-call options paragraph gains the option. `onUnexpectedElement`'s row doe
 
 ```js
 // ClassInfo.unmarshal, after sourceElement
-var heldElements = context.onOverwrittenElement ? {} : null;
+var heldElements = context.onOverwrittenElement ? Object.create(null) : null;
 
 // the two element branches pass it on; the mixed, value and anyAttribute branches don't
 this.unmarshalProperty(context, input, elementPropertyInfo, result, heldElements);
@@ -222,7 +235,8 @@ unmarshalProperty: function (context, input, propertyInfo, result, heldElements)
 },
 ```
 
-`element` is taken before the read, as CR-008's `sourceElement` is. `setProperty` doesn't change.
+`element` is taken before the read, as CR-008's `sourceElement` is. `setProperty` doesn't change. The map has no prototype, so a
+property called `constructor` or `toString` finds nothing in it (section 9).
 
 ### 4.10 Prototype (2026-11-06)
 
@@ -295,8 +309,13 @@ The ranges overlap. Unset shows nothing. Set sits about 1 ms above 3.12.0's medi
     re-link what it moves, as `PARENT` still names the lost object.
   - A hook would add something only for a simple value, which can't be edited in place. None was among the 13, and the
     leaves among them, which are classes here, kept the later value.
-  - objects' case for leaving merging out holds: Word's rules differ by element, and `w:txbxContent` joins second first with no
-    known reason. A merge is a decision for the facade, or for core-ts, once someone wants it.
+  - Merging belongs above the runtime: which kind an element is, is a Word rule. At Jason's request of 2026-11-07, objects'
+    CR-022 proposes the reading in its facade through this callback, for five measured pairs: `w:body` and block `w:sdtContent`
+    joined in order, `w:txbxContent` in a VML box joined in reverse, and `w:pPr` and `w:rPr` merged with the later value winning.
+    Anything else keeps the last. objects reports that, on section 4.9's sketch, editing `keptValue` in place read all 34 of its
+    cases, two to four copies each, with no returned value needed, and that 30 of Word's 34 saves match, against 17 today.
+  - Keep-the-last isn't all Word does outside those pairs either: across three `w:sectPr` copies, `w:pgSz` took the third's size
+    and the second's `w:orient` (CR-022 section 3.1). That is another rule the runtime shouldn't hold.
   - If a hook ever comes, it has to be a new option. An arrow callback like `(...) => list.push(...)` returns a number, so giving
     this return value a meaning later would break such callers.
 
@@ -318,8 +337,8 @@ The ranges overlap. Unset shows nothing. Set sits about 1 ms above 3.12.0's medi
 
 The loss stays silent, and core-ts's section 2.6 stands. A caller who wants it can compare a source element's children with the
 object in `onElement`, or scan in a DOM pass. Either has to work out which properties are single-valued from the class infos,
-which the runtime has to hand at the moment of the overwrite. Since no file in either corpus has the shape, declining costs
-nothing today.
+which the runtime has to hand at the moment of the overwrite. objects' CR-022 (R3) would have to use one of those too.
+Since no file in either corpus has the shape, declining costs nothing today.
 
 ## 8. Implementation and tests (once R1 to R3 are decided)
 
@@ -341,3 +360,79 @@ nothing today.
   so a report is either a shape the count missed or a bug here. Each also runs section 4.10's 13 shapes, for the
   reports a caller of theirs would get.
 - **Version.** Release as 3.13.0, a minor version: one new option, and nothing changes for a caller who doesn't set it.
+
+## 9. As implemented (2026-11-07)
+
+As sections 4.1 to 4.10 describe, with R1 to R3 as recommended and one change from the sketch. Jason, 2026-11-07: "implement it".
+Not released: 3.13.0 waits on section 8's downstream check.
+
+**The change.** `heldElements` is `Object.create(null)`, not the sketch's `{}`. With `{}`, a property called `constructor` or
+`toString` finds `Object.prototype`'s member and is reported on its first element, with a `node` that isn't one. None of objects'
+9,418 properties has such a name, so the prototypes didn't meet it. Section 4.9 now shows the code as built.
+
+The same edit is in `Jsonix/Model/ClassInfo.js` and `dist/Jsonix-all.js`.
+
+**Typings and contract.** Section 4.8, with core-ts's correction: "the tree is the same" isn't true for a caller who edits
+`keptValue`, so it says the runtime stores the same value. CLAUDE.md's new row adds that `keptValue` is the object stored. Both
+READMEs say so, and `tests/typescript/usage.ts` has a use and two `@ts-expect-error` lines.
+
+**Tests.** `tests/overwrittenelements.js` has 40 tests and 180 assertions, on a hand-written mapping, covering section 8's list. Its
+reader reads every shape set and unset and compares the trees. Against 3.12.0, 30 tests fail, and the 10 that pass are those
+expecting no report. Each of these alone fails at least one test: `{}` for the map, dropping any of the four conditions, keeping the
+first element in the map, and not passing the map from either branch. Taking `element` after the read passes all 40, since a read
+ends on the element it read. It stays before the read, as `sourceElement` is. The full suite has 3,714 assertions. Typecheck, ESM
+and bundle checks pass.
+
+**The three copies agree.** The dist and modular copies, loaded as a browser loads them, give the npm copy's output on 420 cases:
+30 documents, 7 sets of options, both styles, with 136 reporting and 60 throwing.
+
+**Through objects 0.7.0, on this factory.** Section 4.10's shapes again: the control reports nothing, and each of the 13 reports
+once. Three `w:body` joined in the callback marshal as `A`, `B`, `C`.
+
+**objects' fixtures.** The 578 `.xml` and `.vml` files now under objects' `test/fixtures`: 568 read and 10 refused, on 3.12.0 and on
+this code, and 0 reports.
+
+**Cost.** Section 4.10's method: one process per run, the median of 25 reads of 8,000 runs through objects' model, six runs each.
+Reads in ms:
+
+| | Median of six | Range |
+|---|---|---|
+| 3.12.0, unset | 115.0 | 109.1 to 118.3 |
+| This code, unset | 113.8 | 108.5 to 122.4 |
+| This code, set | 118.1 | 115.6 to 120.4 |
+
+Unset, no cost shows. Set, it is about 3 ms in 115, with the ranges overlapping. That is above the 115.6 section 4.10 measured for
+the sketch, and I haven't separated `Object.create(null)` from noise. It matters for CR-022, which would set the callback on every
+facade read (its D3).
+
+**The consumers.**
+
+- core-ts read this CR on 2026-11-07: nothing to change in the signature or the conditions, and the two points above and in section
+  4.4. Its corpus pass on section 4.9's sketch, through a scratch hook on objects' CR-021 build with the callback set: of 1,045
+  packages, 1,041 read, 4 failed at load (not looked into), and 0 reports. It says section 8's check is runnable as written.
+- objects built CR-022's prototype on section 4.9's sketch and asks no change. R3 (a) held on all 34 of its cases.
+
+**Downstream check (section 8).** core-ts's passes, on this factory (`81003a28fa1bd3b2`, uncommitted) through the real option, on
+Node 22 and objects' CR-021 build:
+
+- Unset, its suite gives the same result as stock 3.12.0 on that build: 1,887 of 1,899, the same 12 failing by name, which it puts
+  down to the raise's own pins and CR-021's test-side fallout.
+- Of 1,045 packages, 1,041 read and 1,026 saved. The saved parts of all 1,026 hash the same on 3.12.0 unset, this code unset and
+  this code set, and set gives 0 reports.
+- The 19 that didn't read or save are the same in all three runs: 4 refused at load by design (check 75's duplicate entries, the 4
+  above), and 15 refused at save with `MisplacedContentException`.
+- The 13 shapes and the `rt-*` files report as they did on the sketch.
+
+It asks for a rerun on the release's own artifact, which its raise would do anyway.
+
+objects' passes too, on a tarball packed from a copy of this code and installed into a scratch copy of objects at `106319f`:
+
+- Unset, on Node 18.20.8, 20.20.2 and 22.23.4, typecheck and `npm test` pass, and all 341 hashes equal its 3.11.0 run.
+- Set on every facade read, on Node 22, the same pass with 0 reports across the suite and the 341 parts, and all 341 hashes
+  identical. The same build reports once on `rc-10-body`, so the zeros aren't vacuous.
+- The 13 shapes report once each, with section 4.10's property and class, and the 3 controls none. `rt-*` gives 2 reports for three
+  copies and 3 for four.
+- A TypeScript call with all six parameters typechecks through the facade's options with no cast.
+- CR-022 on the real option: 30 of 34 saves match Word, the same four differ, and no `PARENT` is wrong over 589 values.
+- Its cost, on that build: 164.6 ms unset, 166.7 set to a no-op, 168.2 with CR-022's callback, the ranges overlapping. It says that
+  doesn't change its D3.
